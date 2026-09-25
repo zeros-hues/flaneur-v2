@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets
+.env
+.env*.local
+extension/config.ts
+
+# Extension build output
+extension/dist/
