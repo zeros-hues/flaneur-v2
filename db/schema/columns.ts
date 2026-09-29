@@ -7,7 +7,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 /** Dimension of every embedding column. */
-export const EMBEDDING_DIMENSIONS = 384;
+export const EMBEDDING_DIMENSIONS = 768;
 
 export const embedding = (name: string) => vector(name, { dimensions: EMBEDDING_DIMENSIONS });
 

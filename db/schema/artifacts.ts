@@ -25,6 +25,8 @@ export const artifact = pgTable(
     status: artifactStatus("status"),
     capturedAt: timestamptz("captured_at").notNull().defaultNow(),
     itemEmbedding: embedding("item_embedding"),
+    embeddingModel: text("embedding_model"),
+    enrichmentPromptVersion: text("enrichment_prompt_version"),
   },
   (t) => [
     index("artifact_person_id_idx").on(t.personId),

@@ -34,7 +34,11 @@ export const person = pgTable(
     location: text("location"),
     photoUrl: text("photo_url"),
     aboutEmbedding: embedding("about_embedding"),
+    // 2–3 sentence model-written summary; profile_embedding is its embedding.
+    synthesis: text("synthesis"),
     profileEmbedding: embedding("profile_embedding"),
+    embeddingModel: text("embedding_model"),
+    enrichmentPromptVersion: text("enrichment_prompt_version"),
     firstCapturedAt: timestamptz("first_captured_at").notNull().defaultNow(),
     lastProfileSyncAt: timestamptz("last_profile_sync_at"),
   },
@@ -66,6 +70,8 @@ export const role = pgTable(
     domain: text("domain"),
     domainConfidence: real("domain_confidence"),
     mode: roleMode("mode"),
+    // Null until classified; compared against the current prompt version to find stale rows.
+    enrichmentPromptVersion: text("enrichment_prompt_version"),
     sortIndex: integer("sort_index").notNull(),
   },
   (t) => [

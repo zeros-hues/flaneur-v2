@@ -10,6 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "reparse": "node scripts/run-ts.mjs scripts/reparse.ts",
+    "reenrich": "node scripts/run-ts.mjs scripts/reenrich.ts",
     "ext:build": "node extension/build.mjs",
     "ext:watch": "node extension/build.mjs --watch",
     "ext:typecheck": "tsc --noEmit -p extension"

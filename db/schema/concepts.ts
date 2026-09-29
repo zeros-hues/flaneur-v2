@@ -10,6 +10,8 @@ export const concept = pgTable(
     label: text("label").notNull(),
     kind: conceptKind("kind").notNull(),
     embedding: embedding("embedding"),
+    embeddingModel: text("embedding_model"),
+    enrichmentPromptVersion: text("enrichment_prompt_version"),
     documentFrequency: integer("document_frequency").notNull().default(0),
     firstSeenAt: timestamptz("first_seen_at").notNull().defaultNow(),
   },

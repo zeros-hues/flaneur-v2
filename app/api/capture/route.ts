@@ -1,7 +1,9 @@
+import { after } from "next/server";
 import { isAuthorisedCapture } from "@/lib/capture/auth";
 import { saveCapture } from "@/lib/capture/save";
 import { captureBody } from "@/lib/capture/schema";
 import { db } from "@/lib/db";
+import { enrichArtifact, enrichPerson } from "@/lib/enrich";
 import { processSnapshot, type ParseResult } from "@/lib/parsers/run";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,19 @@ export async function POST(request: Request): Promise<Response> {
     result = await db.transaction((tx) => processSnapshot(tx, stored, parsed.data.html, "mark"));
   } catch (error) {
     console.error(`[capture] parse of snapshot ${stored.id} failed`, error);
+  }
+
+  // Enrichment runs after the response is sent (waitUntil on Vercel); failures only log.
+  if (result?.status === "merged") {
+    const { personId, artifactId } = result.diff;
+    after(async () => {
+      try {
+        if (personId) await enrichPerson(personId);
+        else if (artifactId) await enrichArtifact(artifactId);
+      } catch (error) {
+        console.error(`[capture] enrichment of snapshot ${stored.id} failed`, error);
+      }
+    });
   }
 
   return Response.json({ id: stored.id, parse: result, summary: summaryOf(result) }, { status: 200 });
