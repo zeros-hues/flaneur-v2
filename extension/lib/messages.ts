@@ -23,7 +23,8 @@ export interface PostMenuClicked {
   kind: "post-menu-clicked";
 }
 
-export type CaptureResult = { ok: true } | { ok: false; error: string };
+/** `summary` is the server's merge diff, e.g. "Justin Rands: added 5 roles; experience now complete". */
+export type CaptureResult = { ok: true; summary: string | null } | { ok: false; error: string };
 
 function hasKind(message: unknown, kind: string): boolean {
   return typeof message === "object" && message !== null && "kind" in message && message.kind === kind;

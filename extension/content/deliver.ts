@@ -20,6 +20,7 @@ export async function deliver(
   }
 
   onSettled?.(result.ok);
+  if (result.ok && result.summary) showToast(result.summary);
   if (!result.ok) {
     showToast(`Couldn't save capture (${result.error})`, {
       label: "Retry",

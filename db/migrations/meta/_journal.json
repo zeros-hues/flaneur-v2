@@ -22,6 +22,13 @@
       "when": 1790354176824,
       "tag": "0002_capture_type_and_note_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790357407109,
+      "tag": "0003_parsing_layer",
+      "breakpoints": true
     }
   ]
 }

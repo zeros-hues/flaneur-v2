@@ -9,12 +9,14 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "reparse": "node scripts/run-ts.mjs scripts/reparse.ts",
     "ext:build": "node extension/build.mjs",
     "ext:watch": "node extension/build.mjs --watch",
     "ext:typecheck": "tsc --noEmit -p extension"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",
+    "linkedom": "^0.18.13",
     "next": "^16.3.6",
     "postgres": "^3.4.9",
     "react": "^19.3.0",

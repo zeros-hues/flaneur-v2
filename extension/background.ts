@@ -31,7 +31,13 @@ async function send(payload: CapturePayload): Promise<CaptureResult> {
       headers: { "content-type": "application/json", "x-capture-secret": CAPTURE_SECRET },
       body: JSON.stringify(payload),
     });
-    return response.ok ? { ok: true } : { ok: false, error: `HTTP ${response.status}` };
+    if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
+    const body: unknown = await response.json().catch(() => null);
+    const summary =
+      typeof body === "object" && body !== null && "summary" in body && typeof body.summary === "string"
+        ? body.summary
+        : null;
+    return { ok: true, summary };
   } catch {
     return { ok: false, error: "network error" };
   }

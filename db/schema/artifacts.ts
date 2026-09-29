@@ -1,15 +1,18 @@
-import { index, integer, pgTable, real, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { check, index, integer, pgTable, real, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { bytea, embedding, ivfflatCosine, timestamptz } from "./columns";
 import { artifactStatus, artifactType, captureType, scheduleAction } from "./enums";
-import { person } from "./people";
+import { organisation, person } from "./people";
 
 export const artifact = pgTable(
   "artifact",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => person.id, { onDelete: "cascade" }),
+    // Exactly one author: a person, or an organisation (company and showcase pages post too).
+    personId: uuid("person_id").references(() => person.id, { onDelete: "cascade" }),
+    organisationId: uuid("organisation_id").references(() => organisation.id, {
+      onDelete: "cascade",
+    }),
     type: artifactType("type").notNull(),
     sourceUrl: text("source_url").notNull(),
     urn: text("urn"),
@@ -25,7 +28,9 @@ export const artifact = pgTable(
   },
   (t) => [
     index("artifact_person_id_idx").on(t.personId),
+    index("artifact_organisation_id_idx").on(t.organisationId),
     uniqueIndex("artifact_urn_idx").on(t.urn),
+    check("artifact_one_author", sql`num_nonnulls(${t.personId}, ${t.organisationId}) = 1`),
     ivfflatCosine("artifact_item_embedding_idx", t.itemEmbedding),
   ],
 );
