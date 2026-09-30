@@ -24,6 +24,9 @@ export function Nav() {
             </Link>
           </span>
         ))}
+        <a href="/flaneur-extension.zip" className="quiet">
+          download extension
+        </a>
       </nav>
     </header>
   );
