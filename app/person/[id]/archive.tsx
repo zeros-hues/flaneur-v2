@@ -87,7 +87,7 @@ export function Archive({ view }: { view: PersonView }) {
       {view.posts.length > 0 && (
         <section>
           <h2 className="section-title">posts</h2>
-          {/* Anchored so answers in /ask can link to the post they drew on. */}
+          {/* Anchored so answers on the home search can link to the post they drew on. */}
           <ol className="timeline">
             {view.posts.map((post) => (
               <li key={post.id} id={`post-${post.id}`}>

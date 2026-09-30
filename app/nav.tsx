@@ -3,30 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/", label: "search" },
-  { href: "/ask", label: "ask" },
-  { href: "/walk", label: "walk" },
-] as const;
-
 export function Nav() {
   const path = usePathname();
   if (path === "/login") return null;
   return (
     <header className="topbar">
-      <span className="topbar__name">flaneur</span>
+      {/* The home route is search: the name is its link. */}
+      <Link href="/" className="topbar__name" aria-current={path === "/" ? "page" : undefined}>
+        flaneur
+      </Link>
       <nav className="topbar__links" aria-label="Main">
-        {LINKS.map((link, i) => (
-          <span key={link.href}>
-            {i > 0 && <span className="quiet" aria-hidden="true">· </span>}
-            <Link href={link.href} aria-current={path === link.href ? "page" : undefined}>
-              {link.label}
-            </Link>
-          </span>
-        ))}
-        <a href="/flaneur-extension.zip" className="quiet">
-          download extension
-        </a>
+        <Link href="/walk" aria-current={path === "/walk" ? "page" : undefined}>
+          walk
+        </Link>
+        <span>
+          <span className="quiet" aria-hidden="true">· </span>
+          <a href="/flaneur-extension.zip" className="quiet">
+            download extension
+          </a>
+        </span>
       </nav>
     </header>
   );
