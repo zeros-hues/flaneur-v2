@@ -30,6 +30,7 @@ const roleItem = z.object({
   domain: domainValue,
   domain_confidence: z.number().min(0).max(1),
   mode: z.enum(MODES),
+  is_primary: z.boolean(),
 });
 export type RoleResult = z.infer<typeof roleItem>;
 
@@ -49,8 +50,9 @@ export const roleSchema = (roleIds: string[]) => ({
           domain: { type: "string" },
           domain_confidence: { type: "number" },
           mode: { type: "string", enum: [...MODES] },
+          is_primary: { type: "boolean" },
         },
-        required: ["roleId", "domain", "domain_confidence", "mode"],
+        required: ["roleId", "domain", "domain_confidence", "mode", "is_primary"],
         additionalProperties: false,
       },
     },
@@ -64,7 +66,13 @@ export interface RoleInput {
   title: string;
   company: string | null;
   description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  isCurrent: boolean;
 }
+
+const rolePeriod = (r: RoleInput) =>
+  `${r.startDate?.slice(0, 7) ?? "unknown"} to ${r.isCurrent ? "present" : (r.endDate?.slice(0, 7) ?? "unknown")}`;
 
 export const rolePrompt = (roles: RoleInput[]) => `Classify each of the job roles below, all held by one person.
 Judge each role on its own: read its title, company and description together; no single field decides.
@@ -80,6 +88,9 @@ mode: how the person works in this role. Exactly one of:
 - founder: founded or co-founded the organisation
 - academic: student, researcher, lecturer or professor at a university or lab
 - advisory: advisor, board member, mentor, investor
+is_primary: true if this role was the person's main occupation during its period (their full-time
+job, or their main study). False for side, part-time, volunteer, advisory or board roles held
+alongside a main one. Compare the periods: roles held at different times can all be primary.
 
 Return JSON: { "roles": [ ...one object per role... ] }
 
@@ -87,6 +98,7 @@ ${roles
   .map(
     (r) => `Role id: ${r.id}
 Title: ${r.title}
+Period: ${rolePeriod(r)}
 Company: ${r.company ?? "(unknown)"}
 Description: ${r.description?.trim() || "(none)"}`,
   )

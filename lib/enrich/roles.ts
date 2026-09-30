@@ -14,7 +14,15 @@ export async function classifyRoles(personId: string, force: boolean): Promise<n
   const version = PROMPT_VERSIONS.role;
   const stale = or(isNull(role.enrichmentPromptVersion), ne(role.enrichmentPromptVersion, version));
   const rows = await db
-    .select({ id: role.id, title: role.title, description: role.description, company: organisation.displayName })
+    .select({
+      id: role.id,
+      title: role.title,
+      description: role.description,
+      company: organisation.displayName,
+      startDate: role.startDate,
+      endDate: role.endDate,
+      isCurrent: role.isCurrent,
+    })
     .from(role)
     .leftJoin(organisation, eq(role.organisationId, organisation.id))
     .where(force ? eq(role.personId, personId) : and(eq(role.personId, personId), stale));
@@ -34,7 +42,13 @@ export async function classifyRoles(personId: string, force: boolean): Promise<n
     for (const r of byId.values()) {
       await tx
         .update(role)
-        .set({ domain: r.domain, domainConfidence: r.domain_confidence, mode: r.mode, enrichmentPromptVersion: version })
+        .set({
+          domain: r.domain,
+          domainConfidence: r.domain_confidence,
+          mode: r.mode,
+          isPrimary: r.is_primary,
+          enrichmentPromptVersion: version,
+        })
         .where(eq(role.id, r.roleId));
     }
   });

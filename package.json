@@ -11,6 +11,7 @@
     "db:migrate": "drizzle-kit migrate",
     "reparse": "node scripts/run-ts.mjs scripts/reparse.ts",
     "reenrich": "node scripts/run-ts.mjs scripts/reenrich.ts",
+    "test-search": "node scripts/run-ts.mjs scripts/test-search.ts",
     "ext:build": "node extension/build.mjs",
     "ext:watch": "node extension/build.mjs --watch",
     "ext:typecheck": "tsc --noEmit -p extension"

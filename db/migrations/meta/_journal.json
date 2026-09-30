@@ -36,6 +36,13 @@
       "when": 1790649149701,
       "tag": "0004_enrichment",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790703955844,
+      "tag": "0005_saved_query",
+      "breakpoints": true
     }
   ]
 }

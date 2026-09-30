@@ -9,7 +9,7 @@ export const LLM_MODEL = "openai/gpt-oss-120b";
 
 /** Bump the vN when a prompt changes; rows with an older string are re-enriched. */
 export const PROMPT_VERSIONS = {
-  role: `role-v2+${LLM_MODEL}`,
+  role: `role-v3+${LLM_MODEL}`,
   concepts: `concepts-v1+${LLM_MODEL}`,
   synthesis: `synthesis-v2+${LLM_MODEL}`,
   hashtag: "hashtag-v1",

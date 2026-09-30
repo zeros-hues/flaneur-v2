@@ -36,7 +36,7 @@ async function post(path: string, body: unknown): Promise<unknown> {
   }
 }
 
-export type EmbedTask = "RETRIEVAL_DOCUMENT" | "SEMANTIC_SIMILARITY";
+export type EmbedTask = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY" | "SEMANTIC_SIMILARITY";
 
 const embedResponse = z.object({
   embeddings: z.array(z.object({ values: z.array(z.number()).length(EMBEDDING_DIMENSIONS) })),
