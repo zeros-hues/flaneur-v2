@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Flaneur</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        min-width: 320px;
+        background: #F4EFE6;
+        color: #2B2420;
+        font: 1rem/1.4 'Inter', system-ui, sans-serif;
+      }
+      p {
+        margin: 0 0 1rem;
+      }
+      .quiet {
+        color: #8A7F72;
+        font-size: 0.8125rem;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+        color: inherit;
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid #8A7F72;
+        padding: 0.5rem 0;
+        margin-bottom: 1rem;
+        outline: none;
+      }
+      input:focus {
+        border-bottom-color: #2B2420;
+      }
+    </style>
+  </head>
+  <body>
+    <form>
+      <p class="quiet">The capture secret from your Flaneur setup. Press Enter to save.</p>
+      <input id="secret" type="password" autocomplete="off" aria-label="Capture secret" autofocus />
+      <p id="status" class="quiet" aria-live="polite"></p>
+    </form>
+    <script src="options.js"></script>
+  </body>
+</html>

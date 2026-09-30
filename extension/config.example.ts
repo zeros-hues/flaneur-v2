@@ -1,3 +1,3 @@
-// Copy to config.ts (gitignored) and fill in. CAPTURE_SECRET must match the app's .env.
-export const CAPTURE_SECRET = "replace-me";
+// Optional, for local builds: copy to config.ts (gitignored). The capture secret is not set here;
+// enter it on the extension's options page after loading it.
 export const APP_URL = "http://localhost:3000";

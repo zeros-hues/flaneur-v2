@@ -11,3 +11,6 @@ extension/config.ts
 
 # Extension build output
 extension/dist/
+
+# Built by build:ext on every deploy
+public/flaneur-extension.zip

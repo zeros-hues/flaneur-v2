@@ -1,4 +1,3 @@
-import { APP_URL, CAPTURE_SECRET } from "./config";
 import {
   isCaptureRequest,
   POST_MENU_ID,
@@ -6,8 +5,12 @@ import {
   type CaptureResult,
   type PostMenuClicked,
 } from "./lib/messages";
+import { readSecret } from "./lib/secret";
 
 chrome.runtime.onInstalled.addListener(() => {
+  void readSecret().then((secret) => {
+    if (!secret) void chrome.runtime.openOptionsPage();
+  });
   chrome.contextMenus.create({
     id: POST_MENU_ID,
     title: "Capture this post to Flaneur",
@@ -25,12 +28,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 async function send(payload: CapturePayload): Promise<CaptureResult> {
+  const secret = await readSecret();
+  if (!secret) {
+    void chrome.runtime.openOptionsPage();
+    return { ok: false, error: "set the capture secret in the extension options" };
+  }
   try {
-    const response = await fetch(new URL("/api/capture", APP_URL), {
+    const response = await fetch(new URL("/api/capture", __APP_URL__), {
       method: "POST",
-      headers: { "content-type": "application/json", "x-capture-secret": CAPTURE_SECRET },
+      headers: { "content-type": "application/json", "x-capture-secret": secret },
       body: JSON.stringify(payload),
     });
+    if (response.status === 401) return { ok: false, error: "the capture secret was rejected; check the extension options" };
     if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
     const body: unknown = await response.json().catch(() => null);
     const summary =
