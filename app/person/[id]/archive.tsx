@@ -1,7 +1,7 @@
 // Bottom half of the person page: captured fact, archive register.
 import Link from "next/link";
 import type { PersonView } from "@/lib/views/person";
-import { formatRange } from "@/lib/views/format";
+import { formatDay, formatRange, snippet } from "@/lib/views/format";
 
 const LOW_CONFIDENCE = 0.6;
 
@@ -81,6 +81,21 @@ export function Archive({ view }: { view: PersonView }) {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {view.posts.length > 0 && (
+        <section>
+          <h2 className="section-title">posts</h2>
+          {/* Anchored so answers in /ask can link to the post they drew on. */}
+          <ol className="timeline">
+            {view.posts.map((post) => (
+              <li key={post.id} id={`post-${post.id}`}>
+                <p>{snippet(post.bodyText, 200) ?? "(no text)"}</p>
+                <p className="timeline__meta">{formatDay(post.capturedAt)}</p>
+              </li>
+            ))}
+          </ol>
         </section>
       )}
     </div>

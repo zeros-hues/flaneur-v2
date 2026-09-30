@@ -29,6 +29,11 @@ export function formatDay(date: Date): string {
   return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
+/** "Sep 2026": an approximate date. */
+export function formatMonth(date: Date): string {
+  return `${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
 /** First `max` characters on a word boundary, with an ellipsis when cut. */
 export function snippet(text: string | null, max: number): string | null {
   const flat = text?.replace(/\s+/g, " ").trim();

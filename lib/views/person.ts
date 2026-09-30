@@ -10,7 +10,7 @@ export async function loadPerson(id: string) {
     .where(eq(person.id, id));
   if (!p) return null;
 
-  const [notes, roles, schools, concepts, coverage] = await Promise.all([
+  const [notes, roles, schools, concepts, coverage, posts] = await Promise.all([
     db.select({ id: note.id, body: note.body }).from(note).where(eq(note.personId, id)).orderBy(desc(note.createdAt)),
     db
       .select({
@@ -55,9 +55,14 @@ export async function loadPerson(id: string) {
       .select({ section: sectionCoverage.section, isComplete: sectionCoverage.isComplete, knownTotal: sectionCoverage.knownTotal })
       .from(sectionCoverage)
       .where(and(eq(sectionCoverage.personId, id), inArray(sectionCoverage.section, ["experience", "education"]))),
+    db
+      .select({ id: artifact.id, bodyText: artifact.bodyText, capturedAt: artifact.capturedAt })
+      .from(artifact)
+      .where(and(eq(artifact.personId, id), eq(artifact.type, "post")))
+      .orderBy(desc(artifact.capturedAt)),
   ]);
 
-  return { ...p, notes, roles, schools, concepts, coverage };
+  return { ...p, notes, roles, schools, concepts, coverage, posts };
 }
 
 export type PersonView = NonNullable<Awaited<ReturnType<typeof loadPerson>>>;

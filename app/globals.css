@@ -276,3 +276,13 @@ ol {
   text-align: center;
   padding: var(--space-6) 0;
 }
+
+/* ---- Ask ---------------------------------------------------------------- */
+
+.asking {
+  font-family: var(--serif);
+  line-height: var(--leading-reading);
+  color: var(--ink-quiet);
+  text-align: center;
+  padding: var(--space-5) 0;
+}

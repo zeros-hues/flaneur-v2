@@ -55,3 +55,18 @@ export async function generateJson<T>(prompt: string, responseSchema: object, sc
   const content = chatResponse.parse(json).choices[0]?.message.content ?? "";
   return schema.parse(JSON.parse(content));
 }
+
+/** Plain-text completion at temperature 0, with a system prompt. */
+export async function generateText(system: string, user: string): Promise<string> {
+  const json = await post("/chat/completions", {
+    model: LLM_MODEL,
+    temperature: 0,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  });
+  const content = chatResponse.parse(json).choices[0]?.message.content?.trim();
+  if (!content) throw new Error("Groq returned an empty answer");
+  return content;
+}
