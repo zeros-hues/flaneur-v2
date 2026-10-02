@@ -1,0 +1,186 @@
+/* /person/[id]. Values from design-reference (person frames, 1440 and 390). */
+
+.person-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Reading register: the user's note, then the synthesis. Present from the first frame. */
+.person-reading {
+  margin-top: 56px;
+}
+.person-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6em;
+}
+.person-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  margin-bottom: 40px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 20px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-wrap: pretty;
+  white-space: pre-line;
+  cursor: text;
+  outline: none;
+}
+.person-notes .person-note {
+  margin-bottom: 0;
+}
+.person-notes {
+  margin-bottom: 40px;
+}
+.person-note:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--ink-faint);
+  text-underline-offset: 0.25em;
+}
+.person-note--empty {
+  color: var(--margin-text);
+}
+/* Editing looks like the note itself: no box, no border, the same type. */
+.person-note__field {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  resize: none;
+  field-sizing: content;
+  min-height: 1.75em;
+  caret-color: var(--ink);
+}
+.person-note__failed {
+  margin-top: -28px;
+  margin-bottom: 28px;
+  font-size: 12px;
+  color: var(--ink-quiet);
+}
+.person-synthesis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+.person-linkedin {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  font-size: 12px;
+}
+.person-linkedin a {
+  color: var(--margin-text);
+}
+
+.person-rule {
+  margin: 44px 0 52px;
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 40px), transparent 100%);
+}
+
+/* Archive register: captured fact, arriving 200ms after the rule has drawn. */
+.person-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  animation: sheet-rise var(--motion-reading) ease-out 1600ms both;
+}
+.person-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.person-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.person-role {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.person-role__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.person-role__meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--margin-text);
+}
+.person-schools {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.person-school {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.person-school__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.person-school__detail {
+  font-size: 12px;
+  color: var(--ink-quiet);
+}
+.person-concepts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.person-concepts a {
+  color: var(--ink-quiet);
+}
+.person-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-quiet);
+}
+.person-post__date {
+  font-size: 11px;
+  color: var(--margin-text);
+}
+.person-caveat {
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--margin-text);
+}
+
+/* The margin comes last. */
+.person-margin {
+  margin-top: 96px;
+  animation: sheet-fade var(--motion-reading) ease 2000ms both;
+}
+
+@media (max-width: 800px) {
+  .person-reading { margin-top: 40px; }
+  .person-note { font-size: 19px; margin-bottom: 32px; }
+  .person-notes { margin-bottom: 32px; }
+  .person-rule { margin: 36px 0 40px; }
+  .person-margin { margin-top: 64px; }
+}

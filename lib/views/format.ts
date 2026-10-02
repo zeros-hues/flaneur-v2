@@ -43,3 +43,7 @@ export function snippet(text: string | null, max: number): string | null {
   const space = cut.lastIndexOf(" ");
   return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
+
+const DOMAIN_NAMES: Record<string, string> = { ml: "machine learning", "ui-ux": "ui/ux" };
+/** A role domain as people say it: "industrial-design" -> "industrial design", "other:law" -> "law". */
+export const domainName = (d: string) => DOMAIN_NAMES[d] ?? d.replace(/^other:/, "").replace(/-/g, " ");

@@ -1,5 +1,6 @@
 import { CAPTURED_ATTR, isPostMenuClicked } from "../lib/messages";
 import { serialise } from "../lib/serialise";
+import { postSubject } from "../lib/ui/identity";
 import { isOverlayOpen, openCaptureOverlay } from "../lib/ui/overlay";
 import { showToast } from "../lib/ui/toast";
 import { findPostUrn } from "../lib/urn";
@@ -39,7 +40,7 @@ function captureAt(target: Element | null): void {
   const sourceUrl = location.href;
 
   openCaptureOverlay({
-    heading: "Capture post",
+    subject: postSubject(container),
     onCancel: () => release(container, key),
     onSubmit: async (note) => {
       const payload = { type: "post" as const, sourceUrl, html, note, urn, extensionVersion: extensionVersion() };

@@ -1,0 +1,93 @@
+/* The reading sheet shared by person, concept and walk. Values from design-reference (1440 and 390). */
+
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  column-gap: 96px;
+  align-content: start;
+  padding: 88px 64px 140px 184px;
+}
+.sheet__main {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  max-width: 660px;
+}
+
+/* Peripheral margin: no heading on desktop, loosely indented, quiet. */
+.sheet__margin {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0;
+  color: var(--margin-text);
+}
+.sheet__margin-label {
+  display: none;
+}
+.sheet__margin-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: var(--indent, 0);
+}
+.sheet__margin-item > :first-child {
+  align-self: flex-start;
+  font-weight: 500;
+  color: var(--margin-text);
+}
+.sheet__margin-item > :nth-child(2) {
+  align-self: flex-start;
+  color: var(--ink-faint);
+}
+
+.sheet a:hover {
+  text-decoration: none;
+}
+
+/* Archive register type, shared by every sheet. */
+.sheet-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sheet-sub {
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+.sheet-label {
+  font-size: 11px;
+  color: var(--margin-text);
+}
+
+@keyframes sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheet-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 800px) {
+  .sheet {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+    padding: 48px 24px 80px;
+  }
+  .sheet__margin {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 64px;
+  }
+  .sheet__margin-label {
+    display: block;
+  }
+  .sheet__margin-item {
+    padding-left: 0;
+  }
+}

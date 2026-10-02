@@ -1,0 +1,142 @@
+/* /city. Values from design-reference (the street / network frames, 1440 and 390). */
+
+.city-filters {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 44px 64px 0 184px;
+  font-size: 12px;
+}
+.city-filters button {
+  color: var(--ink-quiet);
+  transition: color var(--motion-utility) ease;
+}
+.city-filters button[aria-pressed="true"] {
+  color: var(--ink);
+}
+.city-filters button:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+.city-filters__dot {
+  color: var(--ink-faint);
+}
+
+/* The field: positions are fractions of its width, less the 190px each label needs. */
+.city-field {
+  position: relative;
+  margin: 8px 64px 0 184px;
+  animation: sheet-fade 500ms ease both;
+}
+.city-lines {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(100% - 190px);
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.city-lines path {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.7;
+  transition: opacity 300ms ease;
+}
+.city-lines[data-quiet] path {
+  opacity: 0.35;
+}
+.city-node {
+  position: absolute;
+  left: calc((100% - 190px) * var(--fx));
+}
+.city-node__ring {
+  position: absolute;
+  left: -32px;
+  top: -32px;
+  width: 64px;
+  height: 64px;
+  box-sizing: border-box;
+  border: 1px solid var(--ink-faint);
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: opacity 300ms ease;
+}
+.city-node__ring[data-dim] {
+  opacity: 0.14;
+}
+.city-node .city-person {
+  position: absolute;
+  left: -12px;
+  top: -15px;
+  width: 190px;
+}
+
+.city-person {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: opacity 300ms ease;
+}
+.city-person[data-dim] {
+  opacity: 0.2;
+}
+.city-person__name {
+  align-self: flex-start;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.city-person[data-stub] .city-person__name {
+  color: var(--margin-text);
+}
+.city-person__name:hover {
+  text-decoration: none;
+}
+.city-person__headline {
+  font-size: 12px;
+  color: var(--ink-quiet);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.city-person__domain {
+  font-size: 11px;
+  color: var(--margin-text);
+}
+
+/* Mobile: a plain list, grouped by domain. */
+.city-list {
+  display: none;
+}
+.city-group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.city-group__label {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--margin-text);
+}
+
+@media (max-width: 800px) {
+  .city-filters {
+    padding: 40px 24px 0;
+  }
+  .city-field {
+    display: none;
+  }
+  .city-list {
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+    padding: 28px 24px 72px;
+    animation: sheet-fade 400ms ease both;
+  }
+}

@@ -1,0 +1,46 @@
+/* /atlas. Values from design-reference (atlas frames, cold start). */
+
+.atlas {
+  position: relative;
+  min-height: calc(100vh - 54px);
+}
+.atlas__map {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 42px;
+  height: 748px;
+  max-height: calc(100vh - 160px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+}
+.atlas__cold {
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+  animation: sheet-fade 600ms ease both;
+}
+.atlas__foot {
+  position: absolute;
+  left: 184px;
+  bottom: 28px;
+  font-size: 12px;
+}
+.atlas__foot a {
+  color: var(--margin-text);
+}
+.atlas__foot a:hover {
+  text-decoration: none;
+  color: var(--ink-quiet);
+}
+
+@media (max-width: 800px) {
+  .atlas__map { top: 22px; height: 600px; }
+  .atlas__foot { left: 24px; bottom: 36px; }
+}

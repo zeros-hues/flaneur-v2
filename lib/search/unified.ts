@@ -1,26 +1,13 @@
-// One input, three readings: find people, answer from the corpus, or both.
+// One input, three readings: find people, answer from the corpus, or both, composed as blocks.
 import { z } from "zod";
-import { askCity, type AskSource } from "@/lib/ask";
-import { corpusSize } from "@/lib/ask/retrieve";
+import { askCity } from "@/lib/ask";
 import { generateJson } from "@/lib/enrich/groq";
+import type { Block, QueryResponse } from "@/lib/query/blocks";
+import { marginConcepts } from "@/lib/query/margin";
 import { runSearch } from "./index";
-import type { Coverage, EmptyReason, RoutedQuery, SearchHit } from "./types";
 
 export const QUERY_KINDS = ["people_lookup", "question", "mixed"] as const;
 export type QueryKind = (typeof QUERY_KINDS)[number];
-
-export interface UnifiedResult {
-  kind: QueryKind;
-  answer: string | null;
-  sources: AskSource[] | null;
-  people: SearchHit[] | null;
-  coverage: Coverage | null;
-  corpus_size: number;
-  /** The search's routing, for saving it; null when no search ran or the input could not be routed. */
-  routed_json: RoutedQuery | null;
-  /** Set only when there is neither an answer nor any people to show. */
-  empty_reason: EmptyReason | null;
-}
 
 const classifySchema = {
   type: "object",
@@ -47,29 +34,37 @@ async function classify(input: string): Promise<QueryKind> {
   return kind;
 }
 
-/** Throws when a model or database call fails; the caller reports that as an API error. */
-export async function runQuery(input: string): Promise<UnifiedResult> {
+/**
+ * people_lookup -> [people, margin]; question -> [answer, margin]; mixed -> [answer, rule, people, margin].
+ * A mixed query that finds only one half shows that half. With nothing to show: [empty].
+ * Throws when a model or database call fails; the caller reports that as an API error.
+ */
+export async function runQuery(input: string): Promise<QueryResponse> {
   const kind = await classify(input);
-  const [search, ask, corpus] = await Promise.all([
+  const [search, ask] = await Promise.all([
     kind === "question" ? null : runSearch({ query: input }),
     kind === "people_lookup" ? null : askCity(input),
-    kind === "people_lookup" ? corpusSize() : null,
   ]);
+  const routed_json = search?.routed_json ?? null;
 
   // askCity returns a stock sentence when nothing was retrieved; that is an empty state, not an answer.
-  const answer = ask && ask.retrieved_count > 0 ? ask.answer : null;
-  const people = search ? search.results : null;
-  const empty = !answer && !people?.length;
-
-  return {
-    kind,
-    answer,
-    sources: ask ? (answer ? ask.sources : []) : null,
-    people,
-    coverage: search ? search.coverage : null,
-    corpus_size: ask ? ask.corpus_size : (corpus ?? 0),
-    routed_json: search ? search.routed_json : null,
+  const answer = ask && ask.retrieved_count > 0 ? ask : null;
+  const people = search?.results.length ? search : null;
+  if (!answer && !people) {
     // A question with nothing retrieved has no search reason of its own: the city is quiet on it.
-    empty_reason: empty ? (search?.empty_reason ?? "insufficient_data") : null,
-  };
+    return { blocks: [{ type: "empty", reason: search?.empty_reason ?? "insufficient_data" }], routed_json };
+  }
+
+  const blocks: Block[] = [];
+  if (answer) blocks.push({ type: "answer", text: answer.answer, sources: answer.sources, drawn_from: answer.retrieved_count });
+  if (answer && people) blocks.push({ type: "rule" });
+  if (people) blocks.push({ type: "people", items: people.results, coverage: people.coverage });
+
+  const sources = answer?.sources ?? [];
+  const items = await marginConcepts(
+    [...(people?.results.map((p) => p.person_id) ?? []), ...sources.filter((s) => !s.artifact_id).map((s) => s.person_id)],
+    sources.flatMap((s) => (s.artifact_id ? [s.artifact_id] : [])),
+  );
+  blocks.push({ type: "margin", items });
+  return { blocks, routed_json };
 }

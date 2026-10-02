@@ -1,0 +1,144 @@
+/* /walk. Values from design-reference (walk frames, 1440 and 390). */
+
+.walk {
+  max-width: 620px;
+  transition: opacity 300ms ease;
+}
+.walk[data-empty] {
+  opacity: 0;
+}
+.walk__date {
+  font-size: 12px;
+  color: var(--margin-text);
+  min-height: 1.3em;
+}
+.walk__cards {
+  margin-top: 56px;
+}
+
+/* Each card sits in a slot that can close its gap once the card has set itself aside. */
+.walk-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 350ms ease;
+}
+.walk-slot__inner {
+  min-height: 0;
+  padding-bottom: 48px;
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+.walk-slot[data-state="leaving"] .walk-slot__inner,
+.walk-slot[data-state="closing"] .walk-slot__inner {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+.walk-slot[data-state="closing"] {
+  grid-template-rows: 0fr;
+}
+.walk-slot[data-state="closing"] .walk-slot__inner {
+  overflow: hidden;
+}
+
+.walk-card {
+  position: relative;
+  animation: sheet-rise 400ms ease-out both;
+}
+/* The overdue mark: the only accent on the page, drawn once the card has arrived. */
+.walk-card__mark {
+  position: absolute;
+  left: -26px;
+  top: 2px;
+  height: calc(100% - 6px);
+}
+.walk-card__note {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 20px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.walk-card__post {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+.walk-card__who {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 18px;
+}
+.walk-card__name {
+  align-self: flex-start;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.walk-card__snippet {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-quiet);
+}
+
+/* Hovering an action brings it forward and lets the others recede. */
+.walk-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  margin-top: 18px;
+  font-size: 13px;
+}
+.walk-card__actions button {
+  color: var(--ink-quiet);
+  white-space: nowrap;
+  transition: color var(--motion-utility) ease;
+}
+.walk-card__actions:hover button,
+.walk-card__actions:focus-within button {
+  color: var(--margin-text);
+}
+.walk-card__actions button:hover,
+.walk-card__actions button:focus-visible {
+  color: var(--ink);
+  text-decoration: none;
+}
+.walk-card__status {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+.walk-card__status a {
+  color: var(--ink-quiet);
+}
+
+.walk-ending {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 19px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+  text-align: center;
+  animation: sheet-fade 1200ms ease both;
+}
+
+@media (max-width: 800px) {
+  .walk__cards { margin-top: 40px; }
+  .walk-card__mark { left: -14px; }
+  .walk-card__note { font-size: 19px; }
+}

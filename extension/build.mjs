@@ -35,7 +35,16 @@ async function writeStatic() {
   await copyFile(`${dir}options.html`, `${outdir}/options.html`);
 }
 
-const shared = { bundle: true, target: "chrome120", outdir, logLevel: "info", define: { __APP_URL__: JSON.stringify(origin) } };
+// Fonts are bundled into the content script as bytes and registered with the FontFace API:
+// @font-face inside a shadow root is ignored, and bytes need no fetch and no page CSP allowance.
+const shared = {
+  bundle: true,
+  target: "chrome120",
+  outdir,
+  logLevel: "info",
+  define: { __APP_URL__: JSON.stringify(origin) },
+  loader: { ".woff2": "binary" },
+};
 const builds = [
   // Content scripts cannot be ES modules.
   { ...shared, entryPoints: { content: `${dir}content/index.ts` }, format: "iife" },

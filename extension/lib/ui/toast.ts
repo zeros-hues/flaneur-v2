@@ -5,13 +5,14 @@ export interface ToastAction {
   run: () => void;
 }
 
+/** A plain line on paper, with an optional text action (Retry on a failed capture). */
 export function showToast(text: string, action?: ToastAction): void {
-  const toast = h("div", "panel toast");
+  const toast = h("div", "paper toast");
   toast.setAttribute("role", "status");
   toast.append(h("span", "", text));
 
   if (action) {
-    const button = h("button", "", action.label);
+    const button = h("button", "text", action.label);
     button.type = "button";
     button.addEventListener("click", () => {
       toast.remove();

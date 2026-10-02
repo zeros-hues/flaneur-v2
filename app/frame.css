@@ -1,0 +1,101 @@
+/* Shared frame: grain, navigation, ink reveal, reduced motion. Tokens live in globals.css. */
+
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: 180px 180px;
+}
+
+/* ---- Navigation --------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 36px 64px 0;
+  font-size: 14px;
+  line-height: var(--leading-archive);
+  color: var(--ink-quiet);
+}
+.topbar a {
+  color: var(--ink-quiet);
+  text-decoration: none;
+  transition: color var(--motion-utility) ease;
+}
+.topbar a:hover,
+.topbar a:focus-visible,
+.topbar a[aria-current="page"] {
+  color: var(--nav-active);
+  text-decoration: none;
+}
+.topbar__name {
+  font-weight: 500;
+}
+.topbar__links {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+.topbar__dot {
+  color: var(--ink-faint);
+}
+
+@media (max-width: 800px) {
+  .topbar {
+    padding: 22px 24px 0;
+    font-size: 12.5px;
+  }
+  .topbar__links {
+    gap: 6px;
+  }
+}
+
+/* ---- Ink ---------------------------------------------------------------- */
+
+.ink {
+  display: block;
+  overflow: visible;
+}
+.ink--draw {
+  animation: ink-draw var(--ink-duration, 600ms) var(--ink-ease, var(--ease-ink)) var(--ink-delay, 0ms) both;
+}
+.ink--draw-down {
+  animation: ink-draw-down var(--ink-duration, 600ms) var(--ink-ease, var(--ease-ink)) var(--ink-delay, 0ms) both;
+}
+@keyframes ink-draw-down {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes ink-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Reduced motion: the system setting, or the override in settings (data-motion on html). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+[data-motion="reduce"] *,
+[data-motion="reduce"] *::before,
+[data-motion="reduce"] *::after {
+  animation: none !important;
+  transition: none !important;
+}

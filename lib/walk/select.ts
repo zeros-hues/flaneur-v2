@@ -20,6 +20,8 @@ export interface WalkItem {
   personId: string | null;
   author: string;
   headline: string | null;
+  /** Their LinkedIn profile; null for an organisation's post. */
+  profileUrl: string | null;
   note: string | null;
   snippet: string | null;
   overdue: boolean;
@@ -32,6 +34,7 @@ interface Candidate {
   person_id: string | null;
   author: string | null;
   headline: string | null;
+  profile_url: string | null;
   note: string | null;
   body_text: string | null;
   profile_embedding: string | null;
@@ -53,7 +56,7 @@ const dueCandidates = () =>
       from artifact a left join schedule s on s.artifact_id = a.id
     )
     select d.id as artifact_id, d.type, d.status, d.person_id, d.body_text,
-      coalesce(p.name, o.display_name) as author, p.headline, p.profile_embedding::text as profile_embedding,
+      coalesce(p.name, o.display_name) as author, p.headline, p.profile_url, p.profile_embedding::text as profile_embedding,
       coalesce(
         (select n.body from note n where n.artifact_id = d.id order by n.created_at desc limit 1),
         (select n.body from note n where n.person_id = d.person_id order by n.created_at desc limit 1)
@@ -105,6 +108,7 @@ export async function selectWalk(): Promise<WalkItem[]> {
     personId: c.person_id,
     author: c.author ?? "Unknown",
     headline: c.headline,
+    profileUrl: c.profile_url,
     note: c.note,
     snippet: c.type === "post" ? snippet(c.body_text, 200) : null,
     overdue: Number(c.days_overdue) > OVERDUE_ACCENT_DAYS,

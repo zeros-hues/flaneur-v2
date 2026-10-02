@@ -1,0 +1,289 @@
+/* The query surface at /. Values from design-reference (query frames, 1440 and 390). */
+
+.q {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  column-gap: 96px;
+  align-content: start;
+  padding: 0 64px 120px 184px;
+}
+
+/* Pushes the input down while idle; lifts it once there is something to read. */
+.q__spacer {
+  grid-column: 1 / -1;
+  height: 290px;
+  transition: height 800ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.q__spacer[data-lifted] {
+  height: 88px;
+}
+
+.q__input {
+  grid-column: 1;
+  max-width: 720px;
+}
+.q__field {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  margin: 0;
+  padding: 0 0 14px 2px;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+  min-height: 0;
+  font-family: var(--sans);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: var(--leading-archive);
+  color: var(--ink);
+  caret-color: var(--ink);
+}
+.q__field::placeholder {
+  color: var(--ink-quiet);
+  opacity: 1;
+}
+.q__line {
+  mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
+.q__thinking {
+  margin-top: 28px;
+  padding-left: 2px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+}
+.q__thinking span {
+  animation: q-appear 1ms linear both;
+}
+
+.q__main {
+  grid-column: 1;
+  grid-row: 3;
+  min-width: 0;
+}
+.q__margin {
+  grid-column: 2;
+  grid-row: 3;
+  margin-top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: var(--margin-text);
+  animation: q-settle var(--motion-reading) ease-out both;
+}
+.q__margin a {
+  color: var(--margin-text);
+  padding-left: var(--indent, 0);
+}
+
+/* The idle layer fills the empty space below the input; it never takes a pointer. */
+.idle-city {
+  position: fixed;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Links here never underline on hover; hovering a person brightens only their synthesis. */
+.q a:hover {
+  text-decoration: none;
+}
+
+/* ---- Blocks ------------------------------------------------------------- */
+
+.q-answer {
+  margin-top: 72px;
+  max-width: 640px;
+}
+.q-answer__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-wrap: pretty;
+  animation: q-fade var(--motion-reading) ease both;
+}
+.q-sources {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  line-height: var(--leading-archive);
+  color: var(--ink-quiet);
+  font-variant-numeric: tabular-nums;
+  animation: q-rise6 250ms ease-out both;
+}
+.q-source {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  column-gap: 20px;
+  row-gap: 2px;
+}
+.q-source__who {
+  color: var(--nav-active);
+  font-weight: 500;
+}
+.q-source__what {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.q-source__when {
+  text-align: right;
+  white-space: nowrap;
+}
+.q-answer__foot {
+  margin-top: 28px;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--ink-quiet);
+  animation: q-fade 300ms ease both;
+}
+
+.q-rule {
+  margin-top: 56px;
+  max-width: 640px;
+  mask-image: linear-gradient(90deg, transparent 0, #000 2px, #000 calc(100% - 40px), transparent 100%);
+}
+
+.q-people {
+  margin-top: 72px;
+  max-width: 620px;
+}
+.q-people__list {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+.q-rule + .q-people {
+  margin-top: 48px;
+}
+.q-person {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.q-person__id {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: q-rise8 300ms ease-out both;
+}
+.q-person__name {
+  align-self: flex-start;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.q-person__headline {
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+/* One line, truncated: a glimpse of the person, not their profile. */
+.q-person__synth {
+  margin-top: 9px;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--motion-utility) ease;
+  animation: q-rise8 300ms ease-out both;
+}
+.q-person:hover .q-person__synth {
+  color: var(--ink);
+}
+.q-people__foot {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-quiet);
+  animation: q-fade 300ms ease both;
+}
+.q-save {
+  font-size: 12px;
+  color: var(--ink-quiet);
+}
+
+.q-empty {
+  margin-top: 72px;
+  max-width: 560px;
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: var(--leading-reading);
+  letter-spacing: 0.01em;
+  color: var(--ink-quiet);
+  animation: q-fade var(--motion-reading) ease both;
+}
+
+@keyframes q-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes q-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes q-rise6 {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes q-rise8 {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+/* Arrives at 60% opacity, then settles. */
+@keyframes q-settle {
+  0% { opacity: 0; }
+  0.1% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@media (max-width: 800px) {
+  .q {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+    padding: 0 24px 72px;
+  }
+  .q__spacer { height: 250px; }
+  .q__spacer[data-lifted] { height: 36px; }
+  .q__input { max-width: none; }
+  .q__field { font-size: 19px; }
+  .q__margin {
+    grid-column: 1;
+    grid-row: 4;
+    margin-top: 56px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .q__margin a { padding-left: 0; }
+  .q-answer, .q-people, .q-empty { margin-top: 44px; }
+  .q-answer__text, .q-empty { font-size: 18px; }
+  .q-people__list { gap: 30px; }
+  .q-people__foot { margin-top: 30px; }
+  .q-source { grid-template-columns: minmax(0, 1fr) auto; }
+  .q-source__what { grid-column: 1 / -1; grid-row: 2; }
+  .q-source__when { grid-column: 2; grid-row: 1; }
+}

@@ -1,0 +1,60 @@
+/* /settings. No reference frame: built from the sheet's archive register. */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  font-size: 13px;
+  animation: sheet-fade 300ms ease both;
+}
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.settings a,
+.settings-toggle {
+  color: var(--ink);
+}
+.settings a:hover,
+.settings-toggle:hover {
+  text-decoration: none;
+  color: var(--ink-quiet);
+}
+.settings-queries {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.settings-query {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.settings-query__text {
+  font-size: 14px;
+  color: var(--ink);
+}
+.settings-query__text[data-new] {
+  color: var(--accent);
+}
+.settings-query__meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--margin-text);
+}
+.settings-query__meta button {
+  color: var(--ink-quiet);
+}
+.settings-query__people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.settings-query__people a {
+  color: var(--ink-quiet);
+}

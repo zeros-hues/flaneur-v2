@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 
 export async function loadPerson(id: string) {
   const [p] = await db
-    .select({ id: person.id, name: person.name, headline: person.headline, synthesis: person.synthesis })
+    .select({ id: person.id, name: person.name, headline: person.headline, synthesis: person.synthesis, profileUrl: person.profileUrl })
     .from(person)
     .where(eq(person.id, id));
   if (!p) return null;
@@ -70,7 +70,10 @@ export type PersonView = NonNullable<Awaited<ReturnType<typeof loadPerson>>>;
 export const loadPersonName = async (id: string) =>
   (await db.select({ name: person.name }).from(person).where(eq(person.id, id)))[0]?.name ?? null;
 
-/** Up to 5 other people whose posts share a concept with this person's, most shared first. */
+/**
+ * Up to 5 other people whose posts share a concept with this person's, most shared first,
+ * each with one concept they share (alphabetically first, so it is stable).
+ */
 export async function loadNearby(id: string) {
   const shared = db
     .select({ conceptId: conceptLink.conceptId })
@@ -79,12 +82,18 @@ export async function loadNearby(id: string) {
     .where(eq(artifact.personId, id));
 
   return db
-    .select({ id: person.id, name: person.name, headline: person.headline })
+    .select({
+      id: person.id,
+      name: person.name,
+      conceptId: sql<string>`(array_agg(${concept.id} order by ${concept.label}))[1]`,
+      conceptLabel: sql<string>`(array_agg(${concept.label} order by ${concept.label}))[1]`,
+    })
     .from(person)
     .innerJoin(artifact, eq(artifact.personId, person.id))
     .innerJoin(conceptLink, eq(conceptLink.artifactId, artifact.id))
+    .innerJoin(concept, eq(concept.id, conceptLink.conceptId))
     .where(and(sql`${person.id} <> ${id}`, isNotNull(artifact.personId), inArray(conceptLink.conceptId, shared)))
-    .groupBy(person.id, person.name, person.headline)
+    .groupBy(person.id, person.name)
     .orderBy(desc(sql`count(distinct ${conceptLink.conceptId})`), asc(person.name))
     .limit(5);
 }

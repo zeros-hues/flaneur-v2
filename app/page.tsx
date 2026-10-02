@@ -1,13 +1,7 @@
+import { QuerySurface } from "@/components/query/QuerySurface";
 import { requireSession } from "@/lib/auth";
-import { Search } from "./search";
 
-export default async function SearchPage() {
+export default async function HomePage() {
   await requireSession();
-  return (
-    <main className="page">
-      <div className="page__main">
-        <Search />
-      </div>
-    </main>
-  );
+  return <QuerySurface />;
 }

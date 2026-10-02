@@ -1,5 +1,5 @@
 // Server-side data for /concept/[id].
-import { asc, desc, eq, gt, or, sql } from "drizzle-orm";
+import { asc, desc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { artifact, concept, conceptEdge, conceptLink, organisation, person } from "@/db/schema";
 import { db } from "@/lib/db";
@@ -39,7 +39,16 @@ export async function loadConcept(id: string) {
       .orderBy(desc(conceptEdge.rawCount), asc(other.label)),
   ]);
 
-  return { ...c, artifacts, neighbours };
+  // The people who wrote about it, most often first: the concept page's margin.
+  const counts = new Map<string, number>();
+  for (const a of artifacts) if (a.personId) counts.set(a.personId, (counts.get(a.personId) ?? 0) + 1);
+  const topIds = [...counts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5).map(([pid]) => pid);
+  const rows = topIds.length
+    ? await db.select({ id: person.id, name: person.name, headline: person.headline }).from(person).where(inArray(person.id, topIds))
+    : [];
+  const people = topIds.flatMap((pid) => rows.filter((r) => r.id === pid));
+
+  return { ...c, artifacts, neighbours, people };
 }
 
 export const loadConceptLabel = async (id: string) =>

@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { CSSProperties } from "react";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth";
 import { loadConcept, loadConceptLabel } from "@/lib/views/concept";
 import { formatDay, snippet } from "@/lib/views/format";
+import "@/components/sheet/sheet.css";
+import "@/components/sheet/concept.css";
 
 type Params = { params: Promise<{ id: string }> };
 
 const validId = (id: string) => z.uuid().safeParse(id).success;
+// Hand-placed, not ruled: the margin is a loose column.
+const INDENTS = [0, 14, 4, 22, 8];
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
@@ -24,43 +29,64 @@ export default async function ConceptPage({ params }: Params) {
   if (!view) notFound();
 
   return (
-    <main className="page archive">
-      <article className="page__main stack-lg">
-        <header>
-          <h1 className="heading">{view.label}</h1>
-          <p className="quiet small">
-            {view.kind} · appears in {view.documentFrequency} {view.documentFrequency === 1 ? "artifact" : "artifacts"}
-          </p>
+    <main className="sheet">
+      <article className="sheet__main">
+        <header className="concept-head">
+          <h1 className="concept-title">{view.label}</h1>
+          <span className="concept-kind">{view.kind}</span>
         </header>
 
         {view.artifacts.length > 0 && (
-          <ol className="timeline">
-            {view.artifacts.map((a) => (
-              <li key={a.id}>
-                <p>
-                  {a.personId ? <Link href={`/person/${a.personId}`}>{a.author}</Link> : a.author}
-                  <span className="quiet small"> · {formatDay(a.capturedAt)}</span>
-                </p>
-                {snippet(a.bodyText, 100) && <p className="quiet">{snippet(a.bodyText, 100)}</p>}
-              </li>
-            ))}
+          <ol className="concept-artifacts">
+            {view.artifacts.map((a) => {
+              const text = snippet(a.bodyText, 100);
+              return (
+                <li key={a.id} className="concept-artifact">
+                  {a.personId ? (
+                    <Link href={`/person/${a.personId}`} className="concept-artifact__author">
+                      {a.author}
+                    </Link>
+                  ) : (
+                    <span className="concept-artifact__author">{a.author}</span>
+                  )}
+                  <span className="concept-artifact__date">{formatDay(a.capturedAt)}</span>
+                  {text && <span className="concept-artifact__snippet">{text}</span>}
+                </li>
+              );
+            })}
           </ol>
         )}
 
         {view.neighbours.length > 0 && (
-          <section>
-            <h2 className="section-title">appears alongside</h2>
-            <ol className="stack small">
+          <section className="concept-cooccur">
+            <h2 className="concept-cooccur__label">often found with</h2>
+            <ol>
               {view.neighbours.map((n) => (
                 <li key={n.id}>
                   <Link href={`/concept/${n.id}`}>{n.label}</Link>
-                  <span className="quiet"> {n.rawCount}</span>
+                  <span className="concept-cooccur__count">{n.rawCount}</span>
                 </li>
               ))}
             </ol>
           </section>
         )}
+
+        <p className="concept-appears">
+          appears in {view.documentFrequency} {view.documentFrequency === 1 ? "artifact" : "artifacts"}
+        </p>
       </article>
+
+      {view.people.length > 0 && (
+        <aside className="sheet__margin concept-margin" aria-label="People">
+          <p className="sheet__margin-label">also in this neighbourhood</p>
+          {view.people.map((p, i) => (
+            <div key={p.id} className="sheet__margin-item" style={{ "--indent": `${INDENTS[i] ?? 0}px` } as CSSProperties}>
+              <Link href={`/person/${p.id}`}>{p.name}</Link>
+              {p.headline && <span>{p.headline}</span>}
+            </div>
+          ))}
+        </aside>
+      )}
     </main>
   );
 }

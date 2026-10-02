@@ -1,5 +1,6 @@
 import { scrollThrough } from "../lib/scroll";
 import { serialise } from "../lib/serialise";
+import { profileSubject } from "../lib/ui/identity";
 import { isOverlayOpen, openCaptureOverlay } from "../lib/ui/overlay";
 import { mountTrigger } from "../lib/ui/trigger";
 import { deliver, extensionVersion } from "./deliver";
@@ -24,7 +25,7 @@ function startCapture(): void {
   const scrolled = scrollThrough(scrolling.signal);
 
   openCaptureOverlay({
-    heading: "Capture profile",
+    subject: profileSubject(),
     onCancel: () => scrolling.abort(),
     onSubmit: async (note) => {
       await scrolled;

@@ -1,0 +1,97 @@
+/* /concept/[id]. Values from design-reference (concept frames, 1440 and 390). */
+
+.concept-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.concept-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.concept-kind {
+  font-size: 12px;
+  color: var(--margin-text);
+}
+
+.concept-artifacts {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 48px;
+}
+.concept-artifact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 24px;
+  row-gap: 3px;
+}
+.concept-artifact__author {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.concept-artifact__date {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: right;
+  font-size: 12px;
+  color: var(--margin-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.concept-artifact__snippet {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+
+.concept-cooccur {
+  margin-top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.concept-cooccur__label,
+.concept-appears {
+  font-size: 12px;
+  color: var(--margin-text);
+}
+.concept-cooccur ol {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.concept-cooccur li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+.concept-cooccur a {
+  color: var(--ink);
+}
+.concept-cooccur__count {
+  color: var(--margin-text);
+  font-variant-numeric: tabular-nums;
+}
+.concept-appears {
+  margin-top: 64px;
+}
+
+.concept-margin {
+  margin-top: 4px;
+}
+
+@media (max-width: 800px) {
+  .concept-artifacts { margin-top: 36px; }
+  .concept-margin { margin-top: 64px; }
+}
