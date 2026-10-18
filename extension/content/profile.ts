@@ -1,9 +1,9 @@
-import { scrollThrough } from "../lib/scroll";
 import { serialise } from "../lib/serialise";
 import { profileSubject } from "../lib/ui/identity";
 import { isOverlayOpen, openCaptureOverlay } from "../lib/ui/overlay";
 import { mountTrigger } from "../lib/ui/trigger";
-import { deliver, extensionVersion } from "./deliver";
+import { deliver, extensionVersion,captureIdentity } from "./deliver";
+import type { CapturePayload } from "../lib/messages";
 
 const PROFILE_PATH = /^\/in\/[^/]+/;
 const ROUTE_POLL_MS = 1_000;
@@ -20,25 +20,27 @@ function findProfileRoot(): Element | null {
 function startCapture(): void {
   if (isOverlayOpen()) return;
 
-  // Scroll while the note is being typed so submitting rarely has to wait.
-  const scrolling = new AbortController();
-  const scrolled = scrollThrough(scrolling.signal);
+  let pending:CapturePayload|null=null;
+  const sourceUrl=location.origin+location.pathname;
 
   openCaptureOverlay({
     subject: profileSubject(),
-    onCancel: () => scrolling.abort(),
+    context:"Saves the content currently loaded here. Load more yourself, then save again for a fuller capture.",
+    onCancel: () => {},
     onSubmit: async (note) => {
-      await scrolled;
+      if(pending)return deliver(pending);
+      if(location.origin+location.pathname!==sourceUrl)throw new Error("The page changed. Cancel this capture and open Save on the current page.");
       const root = findProfileRoot();
       if (!root) throw new Error("Couldn't find the profile content");
-      void deliver({
+      pending={
+        ...captureIdentity(),
         type: "profile",
         sourceUrl: location.origin + location.pathname,
         html: serialise(root),
         note,
         urn: null,
         extensionVersion: extensionVersion(),
-      });
+      };return deliver(pending);
     },
   });
 }
@@ -49,7 +51,7 @@ export function initProfileCapture(): void {
 
   const sync = () => {
     const onProfile = PROFILE_PATH.test(location.pathname);
-    if (onProfile && !unmount) unmount = mountTrigger("Capture", startCapture);
+    if (onProfile && !unmount) unmount = mountTrigger("Save", startCapture);
     if (!onProfile && unmount) {
       unmount();
       unmount = null;

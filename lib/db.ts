@@ -8,15 +8,18 @@ const { DATABASE_URL } = z.object({ DATABASE_URL: z.url() }).parse(process.env);
 
 type Sql = ReturnType<typeof postgres>;
 
-// Reuse one pool across dev hot reloads instead of leaking a new one per reload.
-const globalForDb = globalThis as typeof globalThis & { flaneurSql?: Sql };
+// Drizzle mutates timestamp/JSON codecs; direct stores must have an independent pool.
+// Cache both across hot reloads; their combined configured maximum remains ten connections.
+const globalForDb = globalThis as typeof globalThis & { flaneurSql?: Sql; flaneurDirectSql?: Sql };
 
-const sql: Sql = globalForDb.flaneurSql ?? postgres(DATABASE_URL, { max: 10 });
+export const sql: Sql = globalForDb.flaneurDirectSql ?? postgres(DATABASE_URL, { max: 5 });
+const ormSql: Sql = globalForDb.flaneurSql ?? postgres(DATABASE_URL, { max: 5 });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.flaneurSql = sql;
+  globalForDb.flaneurSql = ormSql;
+  globalForDb.flaneurDirectSql = sql;
 }
 
-export const db = drizzle(sql, { schema });
+export const db = drizzle(ormSql, { schema });
 
 export type Db = typeof db;

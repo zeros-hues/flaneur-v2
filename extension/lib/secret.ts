@@ -3,11 +3,13 @@
 const KEY = "captureSecret";
 
 export async function readSecret(): Promise<string | null> {
+  await chrome.storage.local.setAccessLevel({accessLevel:"TRUSTED_CONTEXTS"});
   const stored: Record<string, unknown> = await chrome.storage.local.get(KEY);
   const value = stored[KEY];
   return typeof value === "string" && value ? value : null;
 }
 
 export async function writeSecret(secret: string): Promise<void> {
+  await chrome.storage.local.setAccessLevel({accessLevel:"TRUSTED_CONTEXTS"});
   await chrome.storage.local.set({ [KEY]: secret });
 }

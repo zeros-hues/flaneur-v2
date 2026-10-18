@@ -42,6 +42,10 @@
       <input id="secret" type="password" autocomplete="off" aria-label="Capture secret" autofocus />
       <p id="status" class="quiet" aria-live="polite"></p>
     </form>
+    <h2>Waiting captures</h2>
+    <p class="quiet">Queued captures stay on this device until Flaneur confirms saving them. Updating access does not automatically retry blocked captures.</p>
+    <button id="refresh" type="button">Refresh status</button>
+    <div id="queue" aria-live="polite"></div>
     <script src="options.js"></script>
   </body>
 </html>

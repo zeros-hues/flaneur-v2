@@ -1,22 +1,15 @@
-import { CAPTURED_ATTR, isPostMenuClicked } from "../lib/messages";
+import { isPostMenuClicked,type CapturePayload } from "../lib/messages";
 import { serialise } from "../lib/serialise";
 import { postSubject } from "../lib/ui/identity";
 import { isOverlayOpen, openCaptureOverlay } from "../lib/ui/overlay";
 import { showToast } from "../lib/ui/toast";
 import { findPostUrn } from "../lib/urn";
-import { deliver, extensionVersion } from "./deliver";
+import { deliver, extensionVersion,captureIdentity } from "./deliver";
 
 // Feed cards and profile activity cards both render as this listitem.
 const POST_SELECTOR = '[role="listitem"][componentkey^="update-card-focus"]';
 
 let lastTarget: Element | null = null;
-// Survives the virtualised feed unmounting and remounting a card.
-const handledKeys = new Set<string>();
-
-function release(container: Element, key: string): void {
-  container.removeAttribute(CAPTURED_ATTR);
-  handledKeys.delete(key);
-}
 
 function captureAt(target: Element | null): void {
   if (isOverlayOpen()) return;
@@ -27,27 +20,18 @@ function captureAt(target: Element | null): void {
   }
 
   const urn = findPostUrn(container);
-  const key = urn ?? container.getAttribute("componentkey") ?? "";
-  if (container.hasAttribute(CAPTURED_ATTR) || handledKeys.has(key)) {
-    showToast("Already captured");
-    return;
-  }
-  container.setAttribute(CAPTURED_ATTR, "pending");
-  handledKeys.add(key);
 
   // Serialise now: the card may be unmounted while the note is typed.
   const html = serialise(container);
   const sourceUrl = location.href;
+  const identity=captureIdentity();let pending:CapturePayload|null=null;
 
   openCaptureOverlay({
     subject: postSubject(container),
-    onCancel: () => release(container, key),
+    onCancel: () => {},
     onSubmit: async (note) => {
-      const payload = { type: "post" as const, sourceUrl, html, note, urn, extensionVersion: extensionVersion() };
-      void deliver(payload, (ok) => {
-        if (ok) container.setAttribute(CAPTURED_ATTR, "done");
-        else release(container, key);
-      });
+      pending??={...identity,type:"post",sourceUrl,html,note,urn,extensionVersion:extensionVersion()};
+      return deliver(pending);
     },
   });
 }

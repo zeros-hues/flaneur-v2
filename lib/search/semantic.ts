@@ -1,6 +1,7 @@
 // Semantic retrieval: cosine similarity against person profiles and against concepts.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activePerson,activeArtifact } from "@/lib/memory/eligibility";
 import { embed, toVectorLiteral } from "@/lib/enrich/gemini";
 
 export const SEMANTIC_LIMIT = 10;
@@ -38,14 +39,14 @@ export async function semanticSearch(text: string, candidates: string[] | null, 
   const [profiles, concepts] = await Promise.all([
     db.execute<{ person_id: string; sim: number }>(sql`
       select p.id as person_id, 1 - (p.profile_embedding <=> ${toVectorLiteral(profileQuery)}::vector) as sim
-      from person p where p.profile_embedding is not null ${only("p.id")}
+      from person p where ${activePerson(sql`p.id`)} and p.profile_embedding is not null ${only("p.id")}
       order by sim desc limit ${limit}`),
     db.execute<{ person_id: string; sim: number }>(sql`
       select a.person_id, max(1 - (c.embedding <=> ${toVectorLiteral(conceptQuery)}::vector)) as sim
       from concept c
       join concept_link l on l.concept_id = c.id
       join artifact a on a.id = l.artifact_id
-      where c.embedding is not null and a.person_id is not null ${only("a.person_id")}
+      where ${activeArtifact(sql`a.id`,sql`a.person_id`)} and c.embedding is not null and a.person_id is not null ${only("a.person_id")}
       group by a.person_id
       having max(1 - (c.embedding <=> ${toVectorLiteral(conceptQuery)}::vector)) > ${CONCEPT_MATCH_MIN}
       order by sim desc limit ${limit}`),

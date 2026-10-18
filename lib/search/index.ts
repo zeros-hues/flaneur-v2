@@ -1,28 +1,20 @@
 // Query layer: route → retrieve → coverage, with typed empty states.
-import { asc, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, inArray } from "drizzle-orm";
+import { activePerson } from "@/lib/memory/eligibility";
 import { person } from "@/db/schema";
 import { db } from "@/lib/db";
-import { countPeople, coverage } from "./coverage";
+import { coverage } from "./coverage";
 import { routeQuery } from "./router";
 import { SEMANTIC_LIMIT, semanticSearch } from "./semantic";
-import { structuralPersonIds, structuralPopulation } from "./structural";
+import { structuralPersonIds } from "./structural";
 import type { RoutedQuery, SearchHit, SearchResult } from "./types";
 
-/** Below this many people in a query's population, results would not mean anything. */
-export const MIN_POPULATION = 3;
+/** Compatibility for the supplementary evaluation script; Recall has no population gate. */
+export const MIN_POPULATION = 1;
 /** Structural results have no ranking; they are listed by name up to this many. */
 export const STRUCTURAL_LIMIT = 50;
 
 export type SearchInput = { query: string } | { routed: RoutedQuery | null };
-
-const hasProfile: SQL = sql`p.profile_embedding is not null`;
-
-/** The people this query can meaningfully search, as predicates over person `p`. */
-function population(q: RoutedQuery): SQL[] {
-  if (q.kind === "semantic") return [hasProfile];
-  if (q.kind === "structural") return [structuralPopulation(q.filters)];
-  return [hasProfile, structuralPopulation(q.filters)];
-}
 
 interface Scored {
   personId: string;
@@ -40,7 +32,7 @@ async function hits(ranked: Scored[]): Promise<SearchHit[]> {
       synthesis: person.synthesis,
     })
     .from(person)
-    .where(inArray(person.id, ranked.map((r) => r.personId)));
+    .where(and(activePerson(person.id),inArray(person.id, ranked.map((r) => r.personId))));
   const byId = new Map(rows.map((r) => [r.id, r]));
   return ranked.flatMap(({ personId, score }) => {
     const p = byId.get(personId);
@@ -59,7 +51,7 @@ async function retrieve(q: RoutedQuery): Promise<{ matched: number; results: Sea
   const ids = await structuralPersonIds(q.filters);
   if (q.kind === "structural") {
     const rows = ids.length
-      ? await db.select({ id: person.id }).from(person).where(inArray(person.id, ids)).orderBy(asc(person.name)).limit(STRUCTURAL_LIMIT)
+      ? await db.select({ id: person.id }).from(person).where(and(activePerson(person.id),inArray(person.id, ids))).orderBy(asc(person.name)).limit(STRUCTURAL_LIMIT)
       : [];
     return { matched: ids.length, results: await hits(rows.map((r) => ({ personId: r.id, score: null }))) };
   }
@@ -79,10 +71,6 @@ export async function runSearch(input: SearchInput): Promise<SearchResult> {
   }
 
   const base = { interpretation: routed.interpretation, routed_json: routed };
-  if ((await countPeople(population(routed))) < MIN_POPULATION) {
-    return { ...base, results: [], coverage: await coverage(0), empty_reason: "insufficient_data" };
-  }
-
   const { matched, results } = await retrieve(routed);
   return { ...base, results, coverage: await coverage(matched), empty_reason: results.length ? null : "no_match" };
 }

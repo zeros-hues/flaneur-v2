@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const saveBody = z.object({ text: z.string().trim().min(1).max(500), routed_json: routedQuery });
 
 export async function POST(request: Request): Promise<Response> {
-  const denied = unauthorised(request);
+  const denied = await unauthorised(request);
   if (denied) return denied;
   const body = await readBody(request, saveBody);
   if ("error" in body) return body.error;

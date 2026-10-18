@@ -80,7 +80,7 @@ export interface SearchHit {
   person_id: string;
   name: string;
   headline: string | null;
-  profile_url: string;
+  profile_url: string | null;
   synthesis: string | null;
   /** Cosine similarity for semantic and hybrid searches; null for structural. */
   score: number | null;

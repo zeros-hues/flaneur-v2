@@ -8,14 +8,18 @@ export const artifact = pgTable(
   "artifact",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    // Exactly one author: a person, or an organisation (company and showcase pages post too).
-    personId: uuid("person_id").references(() => person.id, { onDelete: "cascade" }),
+    // Optional legacy author projection; supported v2 authors live in typed relationships.
+    personId: uuid("person_id").references(() => person.id, { onDelete: "restrict" }),
     organisationId: uuid("organisation_id").references(() => organisation.id, {
-      onDelete: "cascade",
+      onDelete: "restrict",
     }),
     type: artifactType("type").notNull(),
     sourceUrl: text("source_url").notNull(),
     urn: text("urn"),
+    migrationKey: text("migration_key").unique(),
+    publishedAt: timestamptz("published_at"),
+    publishedPrecision: text("published_precision").notNull().default("absent"),
+    lastCapturedAt: timestamptz("last_captured_at"),
     postType: text("post_type"),
     bodyText: text("body_text"),
     hashtags: text("hashtags").array().notNull().default([]),
@@ -32,7 +36,8 @@ export const artifact = pgTable(
     index("artifact_person_id_idx").on(t.personId),
     index("artifact_organisation_id_idx").on(t.organisationId),
     uniqueIndex("artifact_urn_idx").on(t.urn),
-    check("artifact_one_author", sql`num_nonnulls(${t.personId}, ${t.organisationId}) = 1`),
+    check("artifact_one_author", sql`num_nonnulls(${t.personId}, ${t.organisationId}) <= 1`),
+    check("artifact_publication_precision", sql`(${t.publishedAt} is null and ${t.publishedPrecision} = 'absent') or (${t.publishedAt} is not null and ${t.publishedPrecision} in ('day','month','year'))`),
     ivfflatCosine("artifact_item_embedding_idx", t.itemEmbedding),
   ],
 );
@@ -65,6 +70,9 @@ export const snapshot = pgTable(
     sourceUrl: text("source_url").notNull(),
     sectionsCovered: text("sections_covered").array().notNull().default([]),
     contentGzip: bytea("content_gzip").notNull(),
+    contentHash: text("content_hash"),
+    adapterId: text("adapter_id"),
+    extensionVersion: text("extension_version"),
     parserVersion: text("parser_version").notNull(),
     capturedAt: timestamptz("captured_at").notNull().defaultNow(),
   },

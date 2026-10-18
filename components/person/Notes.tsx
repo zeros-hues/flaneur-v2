@@ -1,125 +1,37 @@
 "use client";
-
-import { useState, type KeyboardEvent } from "react";
-
-interface NoteRow {
-  id: string;
-  body: string;
+import {useRef,useState} from "react";
+import {useRouter} from "next/navigation";
+interface NoteRow{id:string;body:string}
+function Editor({personId,note,onSaved}:{personId:string;note?:NoteRow;onSaved():void}){
+ const [open,setOpen]=useState(!note),[text,setText]=useState(note?.body??""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const pending=useRef<{requestId:string;body:string}|null>(null);
+ async function save(){
+  if(busy||!text.trim())return;
+  pending.current??={requestId:crypto.randomUUID(),body:text};setBusy(true);setMessage("");
+  try{
+   const body=note?{action:"correct_observation",payload:{requestId:pending.current.requestId,observationId:note.id,bodyText:pending.current.body}}
+    :{requestId:pending.current.requestId,personId,body:pending.current.body};
+   const response=await fetch(note?"/api/review":"/api/notes",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+   if(!response.ok){setMessage(response.status===409?"This note changed. Refresh before revising it.":response.status===401?"Sign in again before saving.":"The note couldn't be saved. Retry uses the same words and decision.");return;}
+   pending.current=null;setText("");setOpen(false);onSaved();
+  }catch{setMessage("The note couldn't be saved. Retry uses the same words and decision.");}finally{setBusy(false);}
+ }
+ if(!open)return <button type="button" className="textlink small" onClick={()=>{setText(note?.body??"");setOpen(true);}}>{note?"revise note":"add a note"}</button>;
+ return <div className="person-notes">
+  <textarea className="person-note person-note__field" aria-label={note?"Revise note":"New note"} rows={4} value={text} maxLength={20000}
+   disabled={busy||pending.current!==null} onChange={event=>setText(event.target.value)} />
+  <div className="observation-actions">
+   <button type="button" className="textlink small" disabled={busy||!text.trim()} onClick={()=>void save()}>{busy?"saving...":pending.current?"retry save":note?"save revision":"save note"}</button>
+   <button type="button" className="textlink small" disabled={busy} onClick={()=>{pending.current=null;setOpen(false);setMessage("");}}>cancel</button>
+  </div>
+  {message&&<p className="quiet small" role="alert">{message}</p>}
+ </div>;
 }
-
-const paragraphs = (body: string) => body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-
-async function send(url: string, method: "POST" | "PATCH", payload: object): Promise<NoteRow | null> {
-  const response = await fetch(url, {
-    method,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  }).catch(() => null);
-  return response?.ok ? ((await response.json()) as NoteRow) : null;
-}
-
-/**
- * One note, read as text and edited in place: click to edit; blur or Cmd/Ctrl+Enter saves;
- * Escape lets the edit go. An emptied note is left as it was (notes are not deleted here).
- */
-function Note({ note, onSave }: { note: NoteRow | null; onSave: (body: string) => Promise<boolean> }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(note?.body ?? "");
-  const [failed, setFailed] = useState(false);
-
-  async function commit() {
-    const body = draft.trim();
-    if (!body || body === note?.body) {
-      setDraft(note?.body ?? "");
-      setEditing(false);
-      return;
-    }
-    const ok = await onSave(body);
-    setFailed(!ok);
-    if (ok) setEditing(false);
-  }
-
-  function onKey(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      event.currentTarget.blur(); // blur saves, so there is one path
-    }
-    if (event.key === "Escape") {
-      setDraft(note?.body ?? "");
-      setFailed(false);
-      setEditing(false);
-    }
-  }
-
-  if (editing) {
-    return (
-      <div>
-        <textarea
-          className="person-note person-note__field"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => void commit()}
-          onKeyDown={onKey}
-          aria-label={note ? "Edit note" : "New note"}
-          autoFocus
-        />
-        {failed && <p className="person-note__failed">That didn&apos;t save.</p>}
-      </div>
-    );
-  }
-
-  const open = () => {
-    setDraft(note?.body ?? "");
-    setEditing(true);
-  };
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={note ? "person-note" : "person-note person-note--empty"}
-      aria-label={note ? "Edit note" : "Add a note"}
-      onClick={open}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          open();
-        }
-      }}
-    >
-      {note ? paragraphs(note.body).map((p, i) => <p key={i}>{p}</p>) : <p>add a note</p>}
-    </div>
-  );
-}
-
-/** The user's notes about a person. With none yet, a quiet place to write the first. */
-export function Notes({ personId, initial }: { personId: string; initial: NoteRow[] }) {
-  const [notes, setNotes] = useState(initial);
-
-  if (!notes.length) {
-    return (
-      <Note
-        note={null}
-        onSave={async (body) => {
-          const created = await send("/api/notes", "POST", { personId, body });
-          if (created) setNotes([created]);
-          return !!created;
-        }}
-      />
-    );
-  }
-  return (
-    <div className="person-notes">
-      {notes.map((n) => (
-        <Note
-          key={n.id}
-          note={n}
-          onSave={async (body) => {
-            const updated = await send(`/api/notes/${n.id}`, "PATCH", { body });
-            if (updated) setNotes((all) => all.map((x) => (x.id === updated.id ? updated : x)));
-            return !!updated;
-          }}
-        />
-      ))}
-    </div>
-  );
+export function Notes({personId,initial,authored,readOnly=false}:{personId:string;initial:NoteRow[];authored:NoteRow[];readOnly?:boolean}){
+ const router=useRouter();
+ return <div className="person-notes">
+  {initial.map(note=><div id={`legacy-note-${note.id}`} key={"legacy:"+note.id}><p className="quiet small">Earlier note · preserved</p><p className="person-note observation-text">{note.body}</p></div>)}
+  {authored.map(note=><div key={note.id}><p className="person-note observation-text">{note.body}</p>{!readOnly&&<Editor personId={personId} note={note} onSaved={()=>router.refresh()} />}</div>)}
+  {!readOnly&&<Editor personId={personId} onSaved={()=>router.refresh()} />}
+ </div>;
 }

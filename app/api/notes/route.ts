@@ -1,18 +1,15 @@
-import { z } from "zod";
-import { createNote, noteBody } from "@/lib/notes";
-import { readBody, unauthorised } from "@/lib/search/http";
+import { sql } from "@/lib/db";
+import { getOwnerSessionRuntime } from "@/lib/session/runtime";
+import { postgresUserNoteStore } from "@/lib/notes/postgres-authoring";
+import { userNoteHandler } from "@/lib/notes/handler";
 
 export const dynamic = "force-dynamic";
-
-const createBody = z.object({ personId: z.uuid(), body: noteBody });
+export const runtime = "nodejs";
 
 export async function POST(request: Request): Promise<Response> {
-  const denied = unauthorised(request);
-  if (denied) return denied;
-  const body = await readBody(request, createBody);
-  if ("error" in body) return body.error;
-
-  const created = await createNote(body.data.personId, body.data.body);
-  if (!created) return Response.json({ error: "person not found" }, { status: 404 });
-  return Response.json(created, { status: 201 });
+  try {
+    const owner=getOwnerSessionRuntime();
+    return await userNoteHandler(postgresUserNoteStore(sql),{origin:process.env.OWNER_SESSION_ORIGIN??"",
+      authorize:request=>owner.authorize(request,"write")})(request);
+  }catch{return Response.json({error:"note_unavailable"},{status:503,headers:{"cache-control":"no-store"}});}
 }

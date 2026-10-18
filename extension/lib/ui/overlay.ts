@@ -6,8 +6,9 @@ import { inkOutline } from "./outline";
 export interface OverlayOptions {
   /** Who is being captured; shown only when the page provided it. */
   subject: Subject | null;
-  /** Resolves once the capture has been handed off (never waits on the server); throw to show an error. */
-  onSubmit: (note: string | null) => Promise<void>;
+  /** Resolves only after local persistence or a confirmed durable server acknowledgement. */
+  onSubmit: (note: string | null) => Promise<string>;
+  context?: string;
   onCancel: () => void;
 }
 
@@ -29,6 +30,7 @@ export function openCaptureOverlay(options: OverlayOptions): void {
 
   const overlay = h("form", "paper overlay");
   overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
   overlay.setAttribute("aria-label", "capture to flaneur");
   overlay.dataset.phase = "open";
 
@@ -41,12 +43,14 @@ export function openCaptureOverlay(options: OverlayOptions): void {
   }
 
   const note = h("textarea", "note");
+  if(options.context)content.append(h("p","quiet",options.context));
   note.rows = 3;
-  note.placeholder = "why'd this catch your eye";
+  note.placeholder = "What caught your attention?";
+  note.maxLength = 5000;
   note.spellcheck = false;
   note.setAttribute("aria-label", "Note");
 
-  const capture = h("button", "text", "capture");
+  const capture = h("button", "text", "Save");
   capture.type = "submit";
   const skip = h("button", "text skip", "skip");
   skip.type = "button";
@@ -59,9 +63,12 @@ export function openCaptureOverlay(options: OverlayOptions): void {
   overlay.append(inkOutline(overlay), content);
 
   let settled = false;
+  const active=document.activeElement;
+  const previousFocus=active?.shadowRoot?.activeElement??active;
   const remove = () => {
     overlay.remove();
     isOpen = false;
+    if(previousFocus instanceof HTMLElement&&previousFocus.isConnected)previousFocus.focus();
   };
   const cancel = () => {
     if (settled) return;
@@ -74,6 +81,11 @@ export function openCaptureOverlay(options: OverlayOptions): void {
   overlay.addEventListener("keydown", (event) => {
     event.stopPropagation(); // keep LinkedIn's shortcuts out of the textarea
     if (event.key === "Escape") cancel();
+    if(event.key==="Tab"){
+      const focusable=[note,capture,skip].filter(element=>!element.disabled),first=focusable[0]!,last=focusable.at(-1)!;
+      if(event.shiftKey&&overlay.getRootNode() instanceof ShadowRoot&&(overlay.getRootNode() as ShadowRoot).activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&overlay.getRootNode() instanceof ShadowRoot&&(overlay.getRootNode() as ShadowRoot).activeElement===last){event.preventDefault();first.focus();}
+    }
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       overlay.requestSubmit();
@@ -88,10 +100,10 @@ export function openCaptureOverlay(options: OverlayOptions): void {
     note.readOnly = true;
     error.hidden = true;
 
-    const written = note.value.trim();
-    options.onSubmit(written === "" ? null : written).then(
-      () => {
-        const confirmed = h("p", "confirmed", written ? "added to your city" : "added to your city, quietly");
+    const written = note.value;
+    options.onSubmit(written.trim() === "" ? null : written).then(
+      (message) => {
+        const confirmed = h("p", "confirmed", message);
         confirmed.setAttribute("aria-live", "polite");
         overlay.append(confirmed);
         overlay.dataset.phase = "confirm";
@@ -102,8 +114,9 @@ export function openCaptureOverlay(options: OverlayOptions): void {
         // The plain error, and the same action again to retry.
         settled = false;
         content.removeAttribute("aria-busy");
-        note.readOnly = false;
-        error.textContent = reason instanceof Error ? reason.message : "Capture failed";
+        // Ambiguous message failures may already have persisted the original payload; preserve its words for retry.
+        note.readOnly = true;
+        error.textContent = reason instanceof Error ? reason.message : "Capture could not be confirmed";
         error.hidden = false;
         capture.textContent = "retry";
       },

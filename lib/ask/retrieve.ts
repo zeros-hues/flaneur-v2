@@ -1,6 +1,7 @@
 // Step 1: retrieves the posts and person syntheses most similar to a question.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activePerson,activeArtifact } from "@/lib/memory/eligibility";
 import { embed, toVectorLiteral } from "@/lib/enrich/gemini";
 
 export const ASK_LIMIT = 12;
@@ -43,12 +44,12 @@ export async function retrieve(question: string, minSimilarity = ASK_MIN_SIMILAR
       select 'post' as kind, a.id as artifact_id, p.id as person_id, p.name as person_name,
         a.body_text as text, a.captured_at, 1 - (a.item_embedding <=> ${q}) as similarity
       from artifact a join person p on p.id = a.person_id
-      where a.item_embedding is not null and a.body_text is not null
+      where ${activeArtifact(sql`a.id`,sql`a.person_id`)} and a.type = 'post' and a.item_embedding is not null and a.body_text is not null
       union all
       select 'synthesis', null, p.id, p.name, p.synthesis,
         coalesce(p.last_profile_sync_at, p.first_captured_at), 1 - (p.profile_embedding <=> ${q})
       from person p
-      where p.profile_embedding is not null and p.synthesis is not null
+      where ${activePerson(sql`p.id`)} and p.profile_embedding is not null and p.synthesis is not null
     ) docs
     where similarity >= ${minSimilarity}
     order by similarity desc
@@ -68,7 +69,8 @@ export async function retrieve(question: string, minSimilarity = ASK_MIN_SIMILAR
 /** Total posts and people: the size of the city a question is asked of. */
 export async function corpusSize(): Promise<number> {
   const [row] = await db.execute<{ n: string }>(
-    sql`select (select count(*) from artifact) + (select count(*) from person) as n`,
+    sql`select (select count(*) from artifact a where ${activeArtifact(sql`a.id`,sql`a.person_id`)}) +
+      (select count(*) from person p where ${activePerson(sql`p.id`)}) as n`,
   );
   return Number(row?.n ?? 0);
 }

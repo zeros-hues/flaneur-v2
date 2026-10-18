@@ -1,0 +1,1 @@
+ALTER TABLE "relationship" ADD CONSTRAINT "relationship_endpoint_unique" UNIQUE("from_object_id","to_object_id","predicate");

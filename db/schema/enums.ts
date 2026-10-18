@@ -4,7 +4,8 @@ export const datePrecision = pgEnum("date_precision", ["month", "year", "absent"
 
 export const roleMode = pgEnum("role_mode", ["ic", "lead", "founder", "academic", "advisory"]);
 
-export const artifactType = pgEnum("artifact_type", ["post", "connection_request"]);
+export const artifactType = pgEnum("artifact_type", ["post", "connection_request", "profile_page",
+  "social_post", "article", "project", "portfolio_page", "personal_website"]);
 
 export const artifactStatus = pgEnum("artifact_status", [
   "pending",

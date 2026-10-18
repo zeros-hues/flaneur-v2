@@ -6,6 +6,7 @@ import { InkLine } from "@/components/ink/InkLine";
 import type { Block, MarginItem } from "@/lib/query/blocks";
 import type { EmptyReason } from "@/lib/search/types";
 import { AnswerBlock } from "./AnswerBlock";
+import { MemoryBlock } from "./MemoryBlock";
 import { PeopleBlock, type SaveTarget } from "./PeopleBlock";
 import { ms, schedule } from "./timing";
 
@@ -50,6 +51,7 @@ export function BlockRenderer({ blocks, save }: { blocks: Block[]; save: SaveTar
   const main = blocks.flatMap((block, i) => {
     const at = starts[i] ?? 0;
     switch (block.type) {
+      case "memory":return [<MemoryBlock key={i} block={block} at={at}/>];
       case "answer":
         return [<AnswerBlock key={i} text={block.text} sources={block.sources} drawnFrom={block.drawn_from} at={at} />];
       case "rule":

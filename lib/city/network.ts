@@ -1,6 +1,7 @@
 // Server-side data for /city: everyone, placed by what they share.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activePerson,activeArtifact } from "@/lib/memory/eligibility";
 import { fieldHeight, FIELD_WIDTH, layout } from "./layout";
 
 /** complete: a full profile (rings); partial: a profile with gaps; stub: captured from a post only. */
@@ -45,8 +46,9 @@ export async function loadNetwork(): Promise<CityNetwork> {
       (select r.domain from role r where r.person_id = p.id and r.is_primary
         order by r.is_current desc, r.start_date desc nulls last limit 1) as domain,
       (select array_agg(distinct cl.concept_id::text) from concept_link cl
-        join artifact a on a.id = cl.artifact_id where a.person_id = p.id) as concepts
+        join artifact a on a.id = cl.artifact_id where a.person_id = p.id and ${activeArtifact(sql`a.id`,sql`a.person_id`)}) as concepts
     from person p
+    where ${activePerson(sql`p.id`)}
     order by p.id`);
 
   const concepts = rows.map((r) => new Set(r.concepts ?? []));

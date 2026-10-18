@@ -1,6 +1,7 @@
 // The generative UI contract: the server decides composition, the client renders blocks in order.
 import type { AskSource } from "@/lib/ask";
 import type { Coverage, EmptyReason, RoutedQuery, SearchHit } from "@/lib/search/types";
+import type { MemoryBlock } from "./memory";
 
 export interface MarginItem {
   concept_id: string;
@@ -8,6 +9,7 @@ export interface MarginItem {
 }
 
 export type Block =
+  | MemoryBlock
   /** drawn_from: how many items the answer was retrieved from (its footnote). */
   | { type: "answer"; text: string; sources: AskSource[]; drawn_from: number }
   | { type: "people"; items: SearchHit[]; coverage: Coverage }

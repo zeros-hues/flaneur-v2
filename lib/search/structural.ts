@@ -1,6 +1,7 @@
 // Structural retrieval: SQL over classified role rows.
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activePerson } from "@/lib/memory/eligibility";
 import type { Filters } from "./types";
 
 /** Transition roles below this confidence are not trusted to define a domain. */
@@ -43,7 +44,7 @@ function transitionCondition(f: Filters): SQL | null {
 export async function structuralPersonIds(f: Filters): Promise<string[]> {
   const conds = [sameRoleCondition(f), transitionCondition(f)].filter((c): c is SQL => c !== null);
   if (!conds.length) return [];
-  const rows = await db.execute<{ id: string }>(sql`select p.id from person p where ${sql.join(conds, sql` and `)}`);
+  const rows = await db.execute<{ id: string }>(sql`select p.id from person p where ${activePerson(sql`p.id`)} and ${sql.join(conds, sql` and `)}`);
   return rows.map((r) => r.id);
 }
 

@@ -27,7 +27,8 @@ export const person = pgTable(
   "person",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    profileUrl: text("profile_url").notNull(),
+    // Optional legacy projection. New reviewed people use UUID identity and captured-source links.
+    profileUrl: text("profile_url"),
     name: text("name").notNull(),
     headline: text("headline"),
     about: text("about"),

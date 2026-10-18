@@ -4,7 +4,7 @@ import { unauthorised } from "@/lib/search/http";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  const denied = unauthorised(request);
+  const denied = await unauthorised(request);
   if (denied) return denied;
   try {
     return Response.json({ pairs: await cityPairs() });

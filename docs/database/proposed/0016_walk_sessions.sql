@@ -1,0 +1,2 @@
+-- Historical proposal promoted to db/migrations/0016_walk_sessions.sql.
+-- The journaled migration is authoritative and remains pending approval.

@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { unauthorisedResponse } from "@/lib/auth";
 
-// Header (scripts) or session cookie (dashboard); see lib/auth.ts.
+// Revocable owner session only; extension capture has separate authorization.
 export const unauthorised = unauthorisedResponse;
 
 /** Parses a JSON body against `schema`, or returns the 400 response to send. */

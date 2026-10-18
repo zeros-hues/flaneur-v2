@@ -1,5 +1,7 @@
 # Flaneur: design implementation context
 
+> Historical implementation reference. The October 10 updated PRD governs product behavior and the updated design brief governs target art direction. The palette, overdue mechanics, provenance treatment, and motion prescriptions below are not v2 acceptance criteria. Preserve primitives only where they meet the updated requirements. Current user authorization permits local schema/migration preparation; it does not permit any database mutation.
+
 Visual source of truth is /design-reference (Claude Design screens, plus
 the pen.dev animation spec sheet). If this file and the reference disagree
 on a visual detail, the reference wins. If the reference shows data we do

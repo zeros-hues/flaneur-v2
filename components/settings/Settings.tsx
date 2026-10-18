@@ -5,6 +5,8 @@ import { useState } from "react";
 import { setPref, usePrefs } from "@/lib/prefs";
 import type { SearchHit } from "@/lib/search/types";
 import { formatDay } from "@/lib/views/format";
+import { OwnerLogout } from "@/components/auth/OwnerLogout";
+import { NotebookExport } from "./NotebookExport";
 import "./settings.css";
 
 export interface SavedQueryRow {
@@ -68,6 +70,7 @@ export function Settings({ saved }: { saved: SavedQueryRow[] }) {
   const prefs = usePrefs();
   return (
     <div className="settings">
+      <OwnerLogout />
       <section className="settings-section">
         <h2 className="sheet-label">sound</h2>
         <button type="button" className="textlink settings-toggle" aria-pressed={prefs.sound} onClick={() => setPref("sound", !prefs.sound)}>
@@ -94,12 +97,7 @@ export function Settings({ saved }: { saved: SavedQueryRow[] }) {
         </a>
       </section>
 
-      <section className="settings-section">
-        <h2 className="sheet-label">export</h2>
-        <a href="/api/export" download>
-          export everything as JSON
-        </a>
-      </section>
+      <NotebookExport />
 
       <section className="settings-section">
         <h2 className="sheet-label">saved queries</h2>

@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Flaneur",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Capture LinkedIn profiles and posts into your Flaneur notebook.",
   "permissions": [
     "contextMenus",
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [],
   "background": {

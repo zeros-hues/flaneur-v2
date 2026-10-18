@@ -1,0 +1,1 @@
+ALTER TABLE "person" ALTER COLUMN "profile_url" DROP NOT NULL;

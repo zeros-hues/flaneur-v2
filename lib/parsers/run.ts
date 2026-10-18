@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { note, person, quarantine, snapshot } from "@/db/schema";
+import { captureRequest, note, person, quarantine, snapshot } from "@/db/schema";
 import { mergeArtifact } from "@/lib/merge-artifact";
 import { mergeProfile, type MergeDiff, type SnapshotRef, type Tx } from "@/lib/merge";
 import { CanaryError, markSuspect, suspectState } from "./canary";
@@ -53,6 +53,8 @@ export async function processSnapshot(
   html: string,
   canaryMode: CanaryMode,
 ): Promise<ParseResult> {
+  const [versioned] = await tx.select({id:captureRequest.id}).from(captureRequest).where(eq(captureRequest.snapshotId,snap.id));
+  if(versioned)throw Object.assign(new Error("VERSIONED_CAPTURE_REQUIRES_DURABLE_PROCESSOR"),{code:"VERSIONED_CAPTURE_REQUIRES_DURABLE_PROCESSOR"});
   const adapter = adapterFor(snap.sourceUrl);
   if (!adapter) return quarantineSnapshot(tx, snap, null, { reason: "no adapter for url", details: { url: snap.sourceUrl } });
 

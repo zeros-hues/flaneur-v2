@@ -1,0 +1,8 @@
+.memory-detail { max-width: 760px; }
+.memory-detail h2 { margin-block: 32px 12px; }
+.memory-detail pre, .memory-detail blockquote {
+ white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.65;
+}
+.memory-detail section { margin-block: 24px; }
+.memory-detail ul { padding-left: 24px; }
+.memory-detail li { margin-block: 10px; }

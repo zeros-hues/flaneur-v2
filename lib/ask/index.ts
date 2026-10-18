@@ -12,6 +12,7 @@ export interface AskSource {
   person_id: string;
   snippet: string;
   captured_at: string;
+  truth_layer: "extracted" | "inferred";
 }
 
 export interface AskResult {
@@ -27,6 +28,7 @@ const toSource = (d: Retrieved): AskSource => ({
   person_id: d.personId,
   snippet: d.text.replace(/\s+/g, " ").trim().slice(0, SNIPPET_CHARS),
   captured_at: d.capturedAt.toISOString(),
+  truth_layer: d.kind === "post" ? "extracted" : "inferred",
 });
 
 export async function askCity(question: string): Promise<AskResult> {
@@ -38,9 +40,9 @@ export async function askCity(question: string): Promise<AskResult> {
   const cited = citedDocuments(docs, citations);
 
   return {
-    answer: answer || reply,
-    // Only what the model drew on; if its citations can't be matched, everything retrieved.
-    sources: (cited.length ? cited : docs).map(toSource),
+    answer: cited.length && answer ? answer : "I couldn't verify evidence for this answer.",
+    // An unmatched citation never makes the retrieved population into supporting evidence.
+    sources: cited.map(toSource),
     retrieved_count: docs.length,
     corpus_size: corpus,
   };

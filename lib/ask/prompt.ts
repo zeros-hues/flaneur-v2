@@ -6,7 +6,8 @@ import type { Retrieved } from "./retrieve";
 const MAX_DOC_CHARS = 2000;
 
 export const SYSTEM_PROMPT = `You are answering a question using only the documents provided.
-Each document is labelled with its author and date.
+Each document is labelled with its author, capture date, and truth layer.
+Profile summaries are generated inference, not captured source quotations. Clearly label any interpretation based on them.
 Answer in 2-4 sentences, directly and plainly.
 After your answer, list the sources you drew on as:
 [Author name, approximate date]
@@ -25,7 +26,7 @@ export function userMessage(question: string, docs: Retrieved[]): string {
   docs.forEach((d, i) => byPerson.set(d.personId, [...(byPerson.get(d.personId) ?? []), i + 1]));
 
   const documents = docs.map((d, i) => {
-    const kind = d.kind === "post" ? "post" : "profile summary";
+    const kind = d.kind === "post" ? "captured post text (extracted)" : "generated profile summary (inferred)";
     const others = (byPerson.get(d.personId) ?? []).filter((n) => n !== i + 1);
     const same = others.length ? ` (same person as document${others.length > 1 ? "s" : ""} ${others.join(", ")})` : "";
     const text = d.text.length > MAX_DOC_CHARS ? `${d.text.slice(0, MAX_DOC_CHARS)}…` : d.text;
@@ -73,15 +74,15 @@ function sameAuthor(cited: string, name: string): boolean {
 }
 
 /**
- * The retrieved documents the model cited. A citation matches documents by author; when its
- * date also matches one of that author's documents, only those are kept.
+ * Require both author and capture month. Unmatched dates never fall back to all author documents.
+ * This legacy format does not establish claim-level support or uniquely identify same-month captures.
  */
 export function citedDocuments(docs: Retrieved[], citations: Citation[]): Retrieved[] {
   const cited = new Set<Retrieved>();
   for (const c of citations) {
     const byAuthor = docs.filter((d) => sameAuthor(c.author, d.personName));
     const byDate = byAuthor.filter((d) => normalise(formatMonth(d.capturedAt)) === normalise(c.date));
-    for (const d of byDate.length ? byDate : byAuthor) cited.add(d);
+    for (const d of byDate) cited.add(d);
   }
   return docs.filter((d) => cited.has(d));
 }

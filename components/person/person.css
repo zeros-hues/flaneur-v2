@@ -172,6 +172,13 @@
 }
 
 /* The margin comes last. */
+.person-observations { margin: 32px 0; }
+.observation-list { list-style: none; padding: 0; }
+.observation-item { margin: 24px 0; padding: 16px 0; border-bottom: 1px solid var(--ink-quiet); }
+.observation-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.observation-actions { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; }
+.observation-evidence { margin: 16px 0; }
+.observation-controls textarea { display: block; width: 100%; font: inherit; padding: 8px; }
 .person-margin {
   margin-top: 96px;
   animation: sheet-fade var(--motion-reading) ease 2000ms both;

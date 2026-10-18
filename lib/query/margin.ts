@@ -1,6 +1,7 @@
 // The peripheral margin: concepts attached to the returned people and to the cited sources.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activeArtifact } from "@/lib/memory/eligibility";
 import type { MarginItem } from "./blocks";
 
 /** The margin is a glimpse, not an index: it ends here. */
@@ -25,7 +26,7 @@ export async function marginConcepts(personIds: string[], artifactIds: string[])
     from concept_link cl
     join artifact a on a.id = cl.artifact_id
     join concept c on c.id = cl.concept_id
-    where a.person_id = any(${p}) or a.id = any(${art})
+    where (a.person_id = any(${p}) or a.id = any(${art})) and ${activeArtifact(sql`a.id`,sql`a.person_id`)}
     group by c.id, c.label
     order by count(distinct a.id) desc,
       min(least(array_position(${p}, a.person_id), array_position(${art}, a.id))) asc nulls last,

@@ -1,6 +1,7 @@
 // Pairs for the idle surface: two things from the city with a real line between them.
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { activePerson,activeArtifact,activeConceptPair } from "@/lib/memory/eligibility";
 
 export const PAIR_LIMIT = 12;
 
@@ -37,7 +38,7 @@ const personPerson = () =>
     join artifact a2 on a2.id = l2.artifact_id
     join person p1 on p1.id = a1.person_id
     join person p2 on p2.id = a2.person_id
-    where p1.id < p2.id
+    where p1.id < p2.id and ${activeArtifact(sql`a1.id`,sql`a1.person_id`)} and ${activeArtifact(sql`a2.id`,sql`a2.person_id`)}
     group by p1.id, p1.name, p2.id, p2.name
     order by count(distinct l1.concept_id) desc, random()
     limit ${PAIR_LIMIT}`);
@@ -51,6 +52,7 @@ const personIdea = () =>
       join artifact a on a.id = l.artifact_id
       join person p on p.id = a.person_id
       join concept c on c.id = l.concept_id
+      where ${activeArtifact(sql`a.id`,sql`a.person_id`)}
       order by p.id, random()
     ) one_each
     order by random()
@@ -63,13 +65,13 @@ const ideaIdea = () =>
     from concept_edge e
     join concept ca on ca.id = e.concept_a_id
     join concept cb on cb.id = e.concept_b_id
-    where e.raw_count > 0 and ca.kind = 'concept' and cb.kind = 'concept'
+    where e.raw_count > 0 and ca.kind = 'concept' and cb.kind = 'concept' and ${activeConceptPair(sql`ca.id`,sql`cb.id`)}
     order by e.raw_count desc, random()
     limit ${PAIR_LIMIT}`);
 
 /** Up to PAIR_LIMIT pairs, interleaving the three kinds. Empty when the city has fewer than 2 people. */
 export async function cityPairs(): Promise<CityPair[]> {
-  const [count] = await db.execute<{ n: string }>(sql`select count(*) n from person`);
+  const [count] = await db.execute<{ n: string }>(sql`select count(*) n from person p where ${activePerson(sql`p.id`)}`);
   if (Number(count?.n ?? 0) < 2) return [];
 
   const [pp, pi, ii] = await Promise.all([personPerson(), personIdea(), ideaIdea()]);
