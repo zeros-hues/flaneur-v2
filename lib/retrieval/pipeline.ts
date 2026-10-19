@@ -29,6 +29,7 @@ export async function evidenceQuery(request: Request, reader: RetrievalReader, p
     state: retrieval.state, matches, uncertain, evaluated: retrieval.evaluated,
     matchedTotal: retrieval.matches.length, uncertainTotal: retrieval.uncertain.length,
     answerEvidence: context.evidence,
+    ...((retrieval as any).patterns ? { patterns: (retrieval as any).patterns } : {}),
   };
   // Uncertain results remain inspectable but never silently become confirmed answer support.
   if (!matches.length || !provider)

@@ -1,4 +1,6 @@
 import { computeResurfaceScore, applyDeterministicDiversity } from "./scoring";
+import { discoverPatterns } from "./patterns";
+import type { PatternInputPerson, PatternSupportItem, DiscoveredPattern } from "./pattern-types";
 
 /** Pure contracts only: callers supply evidence; this module never reads a database. */
 export type TruthLayer = "user" | "source" | "extracted" | "inferred";
@@ -43,6 +45,8 @@ export interface Candidate {
   retrievalReason?: import("./semantic-types").RetrievalReason;
   authorId?: string;
   sourceDomain?: string;
+  patternSupport?: PatternSupportItem[];
+  patternInput?: PatternInputPerson;
 }
 export interface Request {
   mode: "recall" | "resurface" | "reflect";
@@ -54,6 +58,7 @@ export interface Request {
   /** Reflection coverage describes a defined population, never a nearest-neighbour sample. */
   population?: { defined: boolean; total: number; indexed: number };
   semanticScorer?: import("./semantic-types").SemanticScorer;
+  patternInputData?: PatternInputPerson[];
 }
 const normalize = (text: string) => text.normalize("NFKC").toLocaleLowerCase("en").trim();
 const words = (text: string) => new Set(normalize(text).match(/[\p{L}\p{N}]+/gu) ?? []);
@@ -76,6 +81,71 @@ export function retrieveEvidence(request: Request, candidates: Candidate[]) {
       !Number.isInteger(request.population.total) || request.population.total < 1 ||
       request.population.indexed !== request.population.total || candidates.length !== request.population.indexed)) {
     return { state: "insufficient_population" as const, matches: [], uncertain: [], evaluated: 0 };
+  }
+  if (request.mode === "reflect") {
+    const inputPeople: PatternInputPerson[] = request.patternInputData ??
+      candidates.map((c) => c.patternInput).filter((p): p is PatternInputPerson => Boolean(p));
+
+    if (inputPeople.length > 0 || (request.population?.defined && !request.terms.length)) {
+      const discovered = discoverPatterns({
+        people: inputPeople,
+        totalPopulation: request.population?.total ?? candidates.length,
+      });
+
+      if (!discovered.length) {
+        return {
+          state: "no_match" as const,
+          matches: [],
+          uncertain: [],
+          evaluated: candidates.length,
+          patterns: [] as DiscoveredPattern[],
+        };
+      }
+
+      const candidateById = new Map(candidates.map((c) => [c.id, c]));
+      const matchedCandidateIds = new Set<string>();
+
+      for (const pattern of discovered) {
+        for (const supporting of pattern.supportingPeople) {
+          matchedCandidateIds.add(supporting.personId);
+          const cand = candidateById.get(supporting.personId);
+          if (cand) {
+            cand.patternSupport = [
+              ...(cand.patternSupport ?? []),
+              ...supporting.signals,
+            ];
+          }
+        }
+      }
+
+      const matches: { candidate: Candidate; score: number; uncertain: boolean; evidenceIds: string[] }[] = [];
+      for (const candId of matchedCandidateIds) {
+        const cand = candidateById.get(candId);
+        if (!cand) continue;
+        const existingEvIds = cand.evidence.map((e) => e.id);
+        const maxScore = Math.max(
+          ...discovered
+            .filter((p) => p.supportingPeople.some((s) => s.personId === candId))
+            .map((p) => p.compositeScore)
+        );
+        matches.push({
+          candidate: cand,
+          score: maxScore,
+          uncertain: false,
+          evidenceIds: existingEvIds,
+        });
+      }
+
+      matches.sort((a, b) => b.score - a.score || a.candidate.id.localeCompare(b.candidate.id));
+
+      return {
+        state: "matched" as const,
+        matches,
+        uncertain: [],
+        evaluated: candidates.length,
+        patterns: discovered,
+      };
+    }
   }
   const terms = [...new Set(request.terms.flatMap((term) => [...words(term)]))];
   const ranked: { candidate: Candidate; score: number; uncertain: boolean; evidenceIds: string[] }[] = [];

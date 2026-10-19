@@ -96,10 +96,11 @@ export function parsePlan(reply: string, question: string) {
   let kinds:Request['objectKinds'];
   try{kinds=relationshipKinds({mode:plan.mode,terms:plan.terms,constraints,objectKinds:plan.objectKinds});}
   catch(error){if(error instanceof RelationshipClarification)return {state:'clarification' as const,interpretation:plan.interpretation,ambiguities:error.questions};throw error;}
-  if (!plan.terms.length && !constraints.length && !plan.encounteredBetween)
+  if (plan.mode !== "reflect" && !plan.terms.length && !constraints.length && !plan.encounteredBetween)
     return { state: "clarification" as const, interpretation: plan.interpretation, ambiguities: ["Define the topic or population to search."] };
+  const effectiveKinds = kinds ?? (plan.mode === "reflect" && /\bpeople\b/i.test(question) ? ["person"] : undefined);
   const request: Request = { question, mode: plan.mode, terms: plan.terms, constraints,
-    ...(kinds?{objectKinds:[...new Set(kinds)]}:{}),
+    ...(effectiveKinds?{objectKinds:[...new Set(effectiveKinds)]}:{}),
     ...(plan.encounteredBetween ? { encounteredBetween: plan.encounteredBetween } : {}) };
   return { state: "planned" as const, interpretation: plan.interpretation, request };
 }

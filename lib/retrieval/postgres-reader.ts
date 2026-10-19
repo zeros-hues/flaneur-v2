@@ -160,6 +160,141 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
           }
         }
       }
+      if (request.mode === "reflect") {
+        const peopleRows = await sql<{ id: string; name: string; headline: string | null; location: string | null }[]>`
+          select p.id, p.name, p.headline, p.location
+          from public.person p
+          join public.object_ref r on r.id = p.id
+          where r.archived_at is null
+            and not exists (select 1 from public.object_alias a where a.former_object_id = p.id)
+          order by p.id
+        `;
+
+        const roleRows = await sql<{ personId: string; title: string; domain: string | null; organisationName: string | null }[]>`
+          select r.person_id as "personId", r.title, r.domain, o.display_name as "organisationName"
+          from public.role r
+          left join public.organisation o on o.id = r.organisation_id
+          join public.object_ref ref on ref.id = r.person_id and ref.archived_at is null
+          where not exists (select 1 from public.object_alias a where a.former_object_id = r.person_id)
+          order by r.sort_index
+        `;
+
+        const educationRows = await sql<{ personId: string; school: string | null; fieldOfStudy: string | null; degree: string | null }[]>`
+          select e.person_id as "personId", e.school, e.field_of_study as "fieldOfStudy", e.degree
+          from public.education e
+          join public.object_ref ref on ref.id = e.person_id and ref.archived_at is null
+          where not exists (select 1 from public.object_alias a where a.former_object_id = e.person_id)
+          order by e.sort_index
+        `;
+
+        const noteRows = await sql<{ id: string; personId: string | null; artifactId: string | null; artifactAuthorPersonId: string | null; body: string }[]>`
+          select n.id, n.person_id as "personId", n.artifact_id as "artifactId", a.person_id as "artifactAuthorPersonId", n.body
+          from public.note n
+          left join public.artifact a on a.id = n.artifact_id
+          order by n.created_at
+        `;
+
+        const reviewedConceptRows = await sql<{ personId: string; conceptId: string; conceptLabel: string }[]>`
+          select r.from_object_id as "personId", c.id as "conceptId", c.label as "conceptLabel"
+          from public.relationship r
+          join public.concept c on c.id = r.to_object_id
+          join public.object_ref ref on ref.id = r.from_object_id and ref.kind = 'person' and ref.archived_at is null
+          where r.predicate = 'associated_with_concept' and r.state = 'active'
+        `;
+
+        const rolesByPerson = new Map<string, (typeof roleRows)[number][]>();
+        for (const row of roleRows) {
+          if (!rolesByPerson.has(row.personId)) rolesByPerson.set(row.personId, []);
+          rolesByPerson.get(row.personId)!.push(row);
+        }
+
+        const eduByPerson = new Map<string, (typeof educationRows)[number][]>();
+        for (const row of educationRows) {
+          if (!eduByPerson.has(row.personId)) eduByPerson.set(row.personId, []);
+          eduByPerson.get(row.personId)!.push(row);
+        }
+
+        const notesByPerson = new Map<string, { id: string; body: string; targetKind: "person" | "artifact" }[]>();
+        for (const row of noteRows) {
+          const targetId = row.personId ?? row.artifactAuthorPersonId;
+          if (targetId) {
+            if (!notesByPerson.has(targetId)) notesByPerson.set(targetId, []);
+            const existing = notesByPerson.get(targetId)!;
+            if (!existing.some((e) => e.id === row.id)) {
+              existing.push({ id: row.id, body: row.body, targetKind: row.personId ? "person" : "artifact" });
+            }
+          }
+        }
+
+        const conceptsByPerson = new Map<string, { conceptId: string; conceptLabel: string }[]>();
+        for (const row of reviewedConceptRows) {
+          if (!conceptsByPerson.has(row.personId)) conceptsByPerson.set(row.personId, []);
+          conceptsByPerson.get(row.personId)!.push({ conceptId: row.conceptId, conceptLabel: row.conceptLabel });
+        }
+
+        const patternPeople: import("./pattern-types").PatternInputPerson[] = [];
+        let indexedCount = 0;
+
+        for (const p of peopleRows) {
+          const roles = rolesByPerson.get(p.id) ?? [];
+          const education = eduByPerson.get(p.id) ?? [];
+          const notes = notesByPerson.get(p.id) ?? [];
+          const reviewedConcepts = conceptsByPerson.get(p.id) ?? [];
+
+          const patternPerson: import("./pattern-types").PatternInputPerson = {
+            id: p.id,
+            name: p.name,
+            headline: p.headline,
+            location: p.location,
+            roles: roles.map((r) => ({
+              title: r.title,
+              domain: r.domain,
+              organisationName: r.organisationName,
+            })),
+            education: education.map((e) => ({
+              school: e.school,
+              fieldOfStudy: e.fieldOfStudy,
+              degree: e.degree,
+            })),
+            notes: notes.map((n) => ({
+              id: n.id,
+              body: n.body,
+              targetKind: n.targetKind,
+            })),
+            reviewedConcepts,
+          };
+
+          patternPeople.push(patternPerson);
+
+          const hasSupportingData =
+            Boolean(p.headline?.trim()) ||
+            roles.length > 0 ||
+            education.length > 0 ||
+            notes.length > 0 ||
+            reviewedConcepts.length > 0;
+
+          if (hasSupportingData) {
+            indexedCount++;
+          }
+
+          const cand = output.candidates.find((c) => c.id === p.id);
+          if (cand) {
+            cand.patternInput = patternPerson;
+            cand.completeFields = [...new Set([...(cand.completeFields ?? []), "patterns"])];
+          }
+        }
+
+        request.patternInputData = patternPeople;
+        const personCandidates = output.candidates.filter((c) =>
+          peopleRows.some((p) => p.id === c.id)
+        );
+        output.candidates = personCandidates;
+        output.population = {
+          defined: true,
+          total: peopleRows.length,
+          indexed: indexedCount,
+        };
+      }
       return {output};
 }
 export function postgresRetrievalReader(connection:ReturnType<typeof postgres>):RetrievalReader{
