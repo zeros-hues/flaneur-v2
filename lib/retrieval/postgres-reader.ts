@@ -6,6 +6,8 @@ import type { CapturedSourceRow } from "./captured-source";
 import { TEXT_NORMALIZER_VERSION } from "../processing/parse-input";
 import {addRelationshipFilters} from './postgres-relationships';
 import {relationshipKinds} from './relationship-filters';
+import { generateSemanticCandidates } from "./postgres-semantic";
+import type { SemanticCandidate } from "./semantic-types";
 
 /** Prepared v2 reader only: repeatable-read, read-only; no pool, credentials or application imports. */
 export async function readRetrievalTransaction(sql:postgres.TransactionSql,request:Request){
@@ -123,6 +125,41 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
       if (capturedSources.length > 50000) throw new Error("READER_EVIDENCE_LIMIT");
       const output=readCandidates({ objects, observations, locators, facts, encounters, links, derivationHeads, dependencies,legacyNotes,capturedSources });
       await addRelationshipFilters(sql,request,output.candidates);
+      if (request.mode === "resurface") {
+        const queryText = request.question || request.terms.join(" ");
+        let semanticCandidates: SemanticCandidate[] = [];
+        if (request.semanticScorer) {
+          try {
+            semanticCandidates = await request.semanticScorer.scoreCandidates(queryText);
+          } catch {
+            semanticCandidates = [];
+          }
+        } else {
+          try {
+            semanticCandidates = await generateSemanticCandidates(sql, queryText);
+          } catch {
+            semanticCandidates = [];
+          }
+        }
+        if (semanticCandidates.length > 0) {
+          const semanticById = new Map(semanticCandidates.map((c) => [c.id, c]));
+          for (const candidate of output.candidates) {
+            const match = semanticById.get(candidate.id);
+            if (match) {
+              candidate.semanticScore = match.score;
+              if (match.conceptMatches?.length) {
+                candidate.semanticConceptMatches = match.conceptMatches;
+              }
+              if (match.authorId) {
+                candidate.authorId = match.authorId;
+              }
+              if (match.sourceDomain) {
+                candidate.sourceDomain = match.sourceDomain;
+              }
+            }
+          }
+        }
+      }
       return {output};
 }
 export function postgresRetrievalReader(connection:ReturnType<typeof postgres>):RetrievalReader{

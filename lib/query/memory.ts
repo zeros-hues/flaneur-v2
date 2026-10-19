@@ -3,7 +3,14 @@ import { evidenceSlice } from "../retrieval/evidence";
 import { plannedQuery } from "../retrieval/planned-query";
 import type { PlannerProvider } from "../retrieval/planner";
 import type { RetrievalReader } from "../retrieval/pipeline";
-export interface MemoryItem{id:string;kind:"person"|"artifact"|"encounter";label:string;uncertain:boolean;evidence:Evidence[]}
+export interface MemoryItem{
+  id:string;
+  kind:"person"|"artifact"|"encounter";
+  label:string;
+  uncertain:boolean;
+  evidence:Evidence[];
+  retrievalReason?: import("../retrieval/semantic-types").RetrievalReason;
+}
 export interface MemoryBlock{
   type:"memory";mode:"recall"|"resurface"|"reflect"|null;interpretation:string;
   state:"matches"|"no_match"|"clarification"|"unavailable"|"insufficient_population";
@@ -44,7 +51,7 @@ export async function memoryQuery(question:string,referenceInstant:string,deps:M
     for(const e of match.candidate.evidence)if(e.provenance?.observationId&&supportIds.has(e.provenance.observationId)&&!supported.some(v=>v.id===e.id))supported.push(e);
     const evidence=[...supported.filter(e=>e.provenance?.relationship||e.provenance?.trajectory),...supported.filter(e=>!e.provenance?.relationship&&!e.provenance?.trajectory).slice(0,6)]
       .map(e=>memoryEvidenceExcerpt(e,[...plan.request.terms,...plan.request.constraints.map(c=>c.value)]));
-    return [{...label,uncertain,evidence}];
+    return [{...label,uncertain,evidence,...(match.candidate.retrievalReason?{retrievalReason:match.candidate.retrievalReason}:{})}];
   });
   return {...base,mode:plan.request.mode,interpretation:plan.interpretation,items,evaluated:result.evaluated,
     matchedTotal:result.matchedTotal,uncertainTotal:result.uncertainTotal,

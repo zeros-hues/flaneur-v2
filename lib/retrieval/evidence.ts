@@ -1,3 +1,5 @@
+import { computeResurfaceScore, applyDeterministicDiversity } from "./scoring";
+
 /** Pure contracts only: callers supply evidence; this module never reads a database. */
 export type TruthLayer = "user" | "source" | "extracted" | "inferred";
 export interface Evidence {
@@ -36,6 +38,11 @@ export interface Candidate {
   /** Only an authoritative reader can declare a multivalued field completely represented. */
   completeFields?: string[];
   encounters?: { occurredAt: string; evidenceId: string }[];
+  semanticScore?: number;
+  semanticConceptMatches?: import("./semantic-types").SemanticConceptMatch[];
+  retrievalReason?: import("./semantic-types").RetrievalReason;
+  authorId?: string;
+  sourceDomain?: string;
 }
 export interface Request {
   mode: "recall" | "resurface" | "reflect";
@@ -46,6 +53,7 @@ export interface Request {
   encounteredBetween?: { start: string; end: string };
   /** Reflection coverage describes a defined population, never a nearest-neighbour sample. */
   population?: { defined: boolean; total: number; indexed: number };
+  semanticScorer?: import("./semantic-types").SemanticScorer;
 }
 const normalize = (text: string) => text.normalize("NFKC").toLocaleLowerCase("en").trim();
 const words = (text: string) => new Set(normalize(text).match(/[\p{L}\p{N}]+/gu) ?? []);
@@ -99,24 +107,51 @@ export function retrieveEvidence(request: Request, candidates: Candidate[]) {
       uncertain = true;
     }
     if (excluded) continue;
-    // Conservative lexical baseline: every requested term must appear in this object's evidence.
-    // No semantic score is accepted until a calibrated threshold is available.
-    const relevant = [...byId.values()].filter((e) => !e.filterOnly&&terms.some((term) => words(e.text).has(term)));
-    const covered = new Set(relevant.flatMap((e) => [...words(e.text)]));
-    if (terms.some((term) => !covered.has(term))) continue;
-    if (!terms.length && !request.constraints.length && !window) continue;
-    const evidenceIds = new Set([...relevant.map((e) => e.id), ...datedEvidence]);
-    for (const fact of candidate.facts) {
-      if (request.constraints.some((c) => c.field === fact.field && normalize(c.value) === normalize(fact.value)) && byId.has(fact.evidenceId))
-        evidenceIds.add(fact.evidenceId);
+    if (request.mode === "resurface") {
+      const breakdown = computeResurfaceScore({
+        candidate,
+        terms: request.terms,
+      });
+      if (!breakdown.qualifies) continue;
+      const relevant = [...byId.values()].filter((e) => !e.filterOnly);
+      const evidenceIds = new Set<string>(datedEvidence);
+      for (const e of relevant) {
+        if (e.layer === "user" || e.id.startsWith("legacy-note:")) evidenceIds.add(e.id);
+      }
+      for (const e of relevant) {
+        if (terms.some((term) => words(e.text).has(term))) evidenceIds.add(e.id);
+      }
+      if (!evidenceIds.size && relevant[0]) evidenceIds.add(relevant[0].id);
+      for (const fact of candidate.facts) {
+        if (request.constraints.some((c) => c.field === fact.field && normalize(c.value) === normalize(fact.value)) && byId.has(fact.evidenceId))
+          evidenceIds.add(fact.evidenceId);
+      }
+      if (!evidenceIds.size) continue;
+      candidate.retrievalReason = breakdown.reason;
+      ranked.push({ candidate, score: breakdown.compositeScore, uncertain, evidenceIds: [...evidenceIds] });
+    } else {
+      // Conservative lexical baseline: every requested term must appear in this object's evidence.
+      // No semantic score is accepted until a calibrated threshold is available.
+      const relevant = [...byId.values()].filter((e) => !e.filterOnly&&terms.some((term) => words(e.text).has(term)));
+      const covered = new Set(relevant.flatMap((e) => [...words(e.text)]));
+      if (terms.some((term) => !covered.has(term))) continue;
+      if (!terms.length && !request.constraints.length && !window) continue;
+      const evidenceIds = new Set([...relevant.map((e) => e.id), ...datedEvidence]);
+      for (const fact of candidate.facts) {
+        if (request.constraints.some((c) => c.field === fact.field && normalize(c.value) === normalize(fact.value)) && byId.has(fact.evidenceId))
+          evidenceIds.add(fact.evidenceId);
+      }
+      if (!evidenceIds.size) continue;
+      const userRelevant = relevant.some((e) => e.layer === "user");
+      ranked.push({ candidate, score: terms.length + (userRelevant ? 0.5 : 0), uncertain, evidenceIds: [...evidenceIds] });
     }
-    if (!evidenceIds.size) continue;
-    const userRelevant = relevant.some((e) => e.layer === "user");
-    ranked.push({ candidate, score: terms.length + (userRelevant ? 0.5 : 0), uncertain, evidenceIds: [...evidenceIds] });
   }
   ranked.sort((a, b) => b.score - a.score || a.candidate.id.localeCompare(b.candidate.id));
-  const matches = ranked.filter((r) => !r.uncertain);
-  const uncertain = ranked.filter((r) => r.uncertain);
+  let matches = ranked.filter((r) => !r.uncertain);
+  let uncertain = ranked.filter((r) => r.uncertain);
+  if (request.mode === "resurface") {
+    matches = applyDeterministicDiversity(matches);
+  }
   return { state: matches.length ? "matched" as const : uncertain.length ? "uncertain" as const : "no_match" as const,
     matches, uncertain, evaluated: candidates.length };
 }
