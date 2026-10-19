@@ -6,6 +6,7 @@
  * Never LLM intuition or arbitrary ungrounded synthesis.
  */
 
+import { qualifyPatternRole, relevantPatternNote } from "./pattern-support";
 import { PATTERN_CONFIG } from "./pattern-config";
 import type {
   DiscoveredPattern,
@@ -54,7 +55,7 @@ export function discoverPatterns(input: PatternDiscoveryInput): DiscoveredPatter
   const domainPeople = new Map<string, Set<string>>();
   for (const person of people) {
     for (const role of person.roles) {
-      if (role.domain && role.domain.trim()) {
+      if (role.domain && qualifyPatternRole(role)) {
         const domain = role.domain.trim();
         if (!domainPeople.has(domain)) {
           domainPeople.set(domain, new Set());
@@ -80,7 +81,8 @@ export function discoverPatterns(input: PatternDiscoveryInput): DiscoveredPatter
         const signals: PatternSupportItem[] = [];
         // Attach structured role facts
         for (const role of person.roles) {
-          if (role.domain === domain) {
+          const qualification = qualifyPatternRole(role);
+          if (role.domain?.trim() === domain && qualification) {
             const orgText = role.organisationName ? ` @ ${role.organisationName}` : "";
             signals.push({
               personId: person.id,
@@ -88,12 +90,14 @@ export function discoverPatterns(input: PatternDiscoveryInput): DiscoveredPatter
               supportKind: "structured_fact",
               label: "Role",
               value: `${role.title}${orgText}`,
+              detail: qualification.detail,
+              provenance: { roleId: role.id, storedDomain: role.domain, classificationConfidence: role.classificationConfidence, classificationProvenance: role.classificationProvenance, legacyStatus: role.legacyStatus ?? "legacy_unverified", qualificationBasis: qualification.basis },
             });
           }
         }
 
         // Attach owner-authored notes if any mention the domain context
-        for (const note of person.notes) {
+        for (const note of person.notes.filter(note => relevantPatternNote(domain, note.body))) {
           signals.push({
             personId: person.id,
             personName: person.name,
@@ -222,18 +226,6 @@ export function discoverPatterns(input: PatternDiscoveryInput): DiscoveredPatter
           value: n.body,
         }));
 
-        // Attach primary structured role as supporting context
-        if (person.roles[0]) {
-          const r = person.roles[0];
-          signals.push({
-            personId: person.id,
-            personName: person.name,
-            supportKind: "structured_fact",
-            label: "Role",
-            value: `${r.title}${r.organisationName ? ` @ ${r.organisationName}` : ""}`,
-          });
-        }
-
         peopleMap.set(person.id, { person, signals: deduplicateSignals(signals) });
       }
     }
@@ -282,6 +274,10 @@ export function discoverPatterns(input: PatternDiscoveryInput): DiscoveredPatter
               supportKind: "concept_relationship",
               label: "Reviewed Concept",
               value: label,
+              detail: person.reviewedConcepts?.find(concept => concept.conceptId === conceptId)?.reason,
+              provenance: { observationId: person.reviewedConcepts?.find(concept => concept.conceptId === conceptId)?.observationId,
+                relationshipId: person.reviewedConcepts?.find(concept => concept.conceptId === conceptId)?.relationshipId,
+                supportStatus: 'owner_reviewed_interpretation' },
             },
           ],
         });
@@ -311,8 +307,8 @@ export function discoverPatterns(input: PatternDiscoveryInput): DiscoveredPatter
 
     // Calculate corroboration bonus if people have owner notes
     let notesCount = 0;
-    for (const { person } of cluster.peopleMap.values()) {
-      if (person.notes.length > 0) notesCount++;
+    for (const { signals } of cluster.peopleMap.values()) {
+      if (signals.some(signal => signal.supportKind === "owner_authored_note")) notesCount++;
     }
     const noteBonus =
       notesCount >= 2 ? PATTERN_CONFIG.NOTE_CORROBORATION_WEIGHT : 0;

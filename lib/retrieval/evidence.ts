@@ -63,6 +63,38 @@ export interface Request {
 const normalize = (text: string) => text.normalize("NFKC").toLocaleLowerCase("en").trim();
 const words = (text: string) => new Set(normalize(text).match(/[\p{L}\p{N}]+/gu) ?? []);
 
+function qualifyCandidate(request: Request, candidate: Candidate) {
+  const window = request.encounteredBetween;
+  const byId = new Map(candidate.evidence.filter((e) => e.objectId === candidate.id).map((e) => [e.id, e]));
+  let uncertain = false;
+  let excluded = false;
+  const datedEvidence: string[] = [];
+  if (window) {
+    for (const encounter of candidate.encounters ?? []) {
+      const support = byId.get(encounter.evidenceId);
+      const date = Date.parse(encounter.occurredAt);
+      if (support?.verified && support.layer !== "inferred" && Number.isFinite(date) &&
+          date >= Date.parse(window.start) && date < Date.parse(window.end)) datedEvidence.push(support.id);
+    }
+    if (!datedEvidence.length) {
+      if (candidate.completeFields?.includes("encounter_date")) excluded = true;
+      else uncertain = true;
+    }
+  }
+  for (const constraint of request.constraints) {
+    const facts = candidate.facts.filter((fact) => fact.field === constraint.field);
+    const confirmed = facts.filter((fact) => {
+      const evidence = byId.get(fact.evidenceId);
+      return evidence?.verified && evidence.layer !== "inferred";
+    });
+    if (confirmed.some((fact) => normalize(fact.value) === normalize(constraint.value))) continue;
+    if (candidate.completeFields?.includes(constraint.field)) { excluded = true; break; }
+    uncertain = true;
+  }
+
+  return { byId, uncertain, excluded, datedEvidence };
+}
+
 export function retrieveEvidence(request: Request, candidates: Candidate[]) {
   const window = request.encounteredBetween;
   if (window && (!Number.isFinite(Date.parse(window.start)) || !Number.isFinite(Date.parse(window.end)) ||
@@ -83,13 +115,22 @@ export function retrieveEvidence(request: Request, candidates: Candidate[]) {
     return { state: "insufficient_population" as const, matches: [], uncertain: [], evaluated: 0 };
   }
   if (request.mode === "reflect") {
-    const inputPeople: PatternInputPerson[] = request.patternInputData ??
-      candidates.map((c) => c.patternInput).filter((p): p is PatternInputPerson => Boolean(p));
+    const qualifications = candidates.map(candidate => ({ candidate, ...qualifyCandidate(request, candidate) }));
+    // Unknown filter membership cannot define a complete Reflect population.
+    if (qualifications.some(row => !row.excluded && row.uncertain))
+      return { state: "insufficient_population" as const, matches: [], uncertain: [], evaluated: candidates.length };
+    const qualifiedIds = new Set(qualifications.filter(row => !row.excluded).map(row => row.candidate.id));
+    const inputPeople: PatternInputPerson[] = (request.patternInputData ??
+      candidates.map((c) => c.patternInput).filter((p): p is PatternInputPerson => Boolean(p)))
+      .filter(person => qualifiedIds.has(person.id));
+    // Reflect topical terms are not implemented as a population definition: abstain.
+    if (request.terms.length)
+      return { state: "insufficient_population" as const, matches: [], uncertain: [], evaluated: candidates.length };
 
     if (inputPeople.length > 0 || (request.population?.defined && !request.terms.length)) {
       const discovered = discoverPatterns({
         people: inputPeople,
-        totalPopulation: request.population?.total ?? candidates.length,
+        totalPopulation: qualifiedIds.size,
       });
 
       if (!discovered.length) {
@@ -150,32 +191,7 @@ export function retrieveEvidence(request: Request, candidates: Candidate[]) {
   const terms = [...new Set(request.terms.flatMap((term) => [...words(term)]))];
   const ranked: { candidate: Candidate; score: number; uncertain: boolean; evidenceIds: string[] }[] = [];
   for (const candidate of candidates) {
-    const byId = new Map(candidate.evidence.filter((e) => e.objectId === candidate.id).map((e) => [e.id, e]));
-    let uncertain = false;
-    let excluded = false;
-    const datedEvidence: string[] = [];
-    if (window) {
-      for (const encounter of candidate.encounters ?? []) {
-        const support = byId.get(encounter.evidenceId);
-        const date = Date.parse(encounter.occurredAt);
-        if (support?.verified && support.layer !== "inferred" && Number.isFinite(date) &&
-            date >= Date.parse(window.start) && date < Date.parse(window.end)) datedEvidence.push(support.id);
-      }
-      if (!datedEvidence.length) {
-        if (candidate.completeFields?.includes("encounter_date")) excluded = true;
-        else uncertain = true;
-      }
-    }
-    for (const constraint of request.constraints) {
-      const facts = candidate.facts.filter((fact) => fact.field === constraint.field);
-      const confirmed = facts.filter((fact) => {
-        const evidence = byId.get(fact.evidenceId);
-        return evidence?.verified && evidence.layer !== "inferred";
-      });
-      if (confirmed.some((fact) => normalize(fact.value) === normalize(constraint.value))) continue;
-      if (candidate.completeFields?.includes(constraint.field)) { excluded = true; break; }
-      uncertain = true;
-    }
+    const { byId, uncertain, excluded, datedEvidence } = qualifyCandidate(request, candidate);
     if (excluded) continue;
     if (request.mode === "resurface") {
       const breakdown = computeResurfaceScore({

@@ -36,6 +36,8 @@ export function MemoryBlock({block,at}:{block:MemoryResult;at:number}){
                     ):(
                       <span>{sig.label}: {sig.value}</span>
                     )}
+                    {sig.detail&&<p>{sig.detail}</p>}
+                    {sig.provenance?.legacyStatus==="legacy_unverified"&&<p>Earlier saved role text; domain classification is inferred, not reviewed proof.</p>}
                   </li>)}
                 </ul>
               </div>

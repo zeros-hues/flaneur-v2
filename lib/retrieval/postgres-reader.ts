@@ -1,3 +1,5 @@
+import { conceptAssociationOrigin, conceptAssociationProofs } from "../relationships/concept-association";
+import { migrationId } from "../migration/identity";
 import type postgres from "postgres";
 import { readCandidates, type ReaderData, type ObservationRow, type LocatorRow } from "./reader";
 import type { RetrievalReader } from "./pipeline";
@@ -170,8 +172,8 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
           order by p.id
         `;
 
-        const roleRows = await sql<{ personId: string; title: string; domain: string | null; organisationName: string | null }[]>`
-          select r.person_id as "personId", r.title, r.domain, o.display_name as "organisationName"
+        const roleRows = await sql<{ personId: string; id: string; title: string; description: string | null; domain: string | null; classificationConfidence: number | null; classificationProvenance: string | null; organisationName: string | null }[]>`
+          select r.person_id as "personId", r.id, r.title, r.description, r.domain, r.domain_confidence as "classificationConfidence", r.enrichment_prompt_version as "classificationProvenance", o.display_name as "organisationName"
           from public.role r
           left join public.organisation o on o.id = r.organisation_id
           join public.object_ref ref on ref.id = r.person_id and ref.archived_at is null
@@ -194,12 +196,15 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
           order by n.created_at
         `;
 
-        const reviewedConceptRows = await sql<{ personId: string; conceptId: string; conceptLabel: string }[]>`
-          select r.from_object_id as "personId", c.id as "conceptId", c.label as "conceptLabel"
+        const reviewedConceptRows = await sql<{ id: string; personId: string; conceptId: string; conceptLabel: string }[]>`
+          select r.id, r.from_object_id as "personId", c.id as "conceptId", c.label as "conceptLabel"
           from public.relationship r
           join public.concept c on c.id = r.to_object_id
           join public.object_ref ref on ref.id = r.from_object_id and ref.kind = 'person' and ref.archived_at is null
           where r.predicate = 'associated_with_concept' and r.state = 'active'
+            and r.origin_key='reviewed-concept-v1:'||r.from_object_id::text||':'||r.to_object_id::text
+            and not exists(select 1 from public.object_alias a where a.former_object_id=r.from_object_id)
+          order by r.id limit 5001
         `;
 
         const rolesByPerson = new Map<string, (typeof roleRows)[number][]>();
@@ -226,10 +231,16 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
           }
         }
 
-        const conceptsByPerson = new Map<string, { conceptId: string; conceptLabel: string }[]>();
+        const conceptsByPerson = new Map<string, NonNullable<import('./pattern-types').PatternInputPerson['reviewedConcepts']>>();
+        if (reviewedConceptRows.length > 5000) throw new Error("RELATIONSHIP_EDGE_LIMIT");
         for (const row of reviewedConceptRows) {
+          if (row.id !== migrationId(conceptAssociationOrigin(row.personId, row.conceptId)))
+            throw new Error("RELATIONSHIP_EDGE_CONFLICT");
+          const proof = (await conceptAssociationProofs(sql, row.id)).find(proof => proof.current);
+          if (!proof) continue;
           if (!conceptsByPerson.has(row.personId)) conceptsByPerson.set(row.personId, []);
-          conceptsByPerson.get(row.personId)!.push({ conceptId: row.conceptId, conceptLabel: row.conceptLabel });
+          conceptsByPerson.get(row.personId)!.push({ conceptId: row.conceptId, conceptLabel: proof.conceptAtDecision.label,
+            reason: proof.reason, observationId: proof.id, relationshipId: row.id });
         }
 
         const patternPeople: import("./pattern-types").PatternInputPerson[] = [];
@@ -247,7 +258,12 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
             headline: p.headline,
             location: p.location,
             roles: roles.map((r) => ({
+              id: r.id,
               title: r.title,
+              description: r.description,
+              classificationConfidence: r.classificationConfidence,
+              classificationProvenance: r.classificationProvenance,
+              legacyStatus: "legacy_unverified",
               domain: r.domain,
               organisationName: r.organisationName,
             })),

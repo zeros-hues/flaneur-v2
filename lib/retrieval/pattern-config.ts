@@ -39,20 +39,20 @@ export const PATTERN_CONFIG = {
   /** Human-readable headline and observational copy templates. */
   DOMAIN_COPY: {
     web: {
-      headline: "Creative web engineering and interaction craft",
-      observationCopy: "Several people you saved work in creative web development and interaction-focused roles.",
+      headline: "Web development and web design",
+      observationCopy: "Several people you saved have worked in web development or web design.",
     },
     "industrial-design": {
       headline: "Industrial design and physical product craft",
-      observationCopy: "You tend to notice people working in industrial and product design.",
+      observationCopy: "Several people you saved have worked in industrial or furniture design.",
     },
     "ui-ux": {
       headline: "Product and interface design",
-      observationCopy: "A number of the people you saved focus on product and interface design.",
+      observationCopy: "Several people you saved have worked in user experience or interface design.",
     },
     creative: {
       headline: "Creative direction and visual systems",
-      observationCopy: "Multiple people you saved work across creative direction and brand systems.",
+      observationCopy: "Several people you saved have worked in creative direction, visual design or branding.",
     },
   } as Record<string, { headline: string; observationCopy: string }>,
 
@@ -62,12 +62,12 @@ export const PATTERN_CONFIG = {
       observationCopy: "You repeatedly noted industry recognition (Awwwards, SOTD) when noticing people.",
     },
     distinctive_portfolio: {
-      headline: "Distinctive portfolios and personal sites",
-      observationCopy: "You repeatedly noted distinctive portfolios and personal sites when saving people.",
+      headline: "Portfolios mentioned in your notes",
+      observationCopy: "You repeatedly mentioned portfolios in your notes about saved people.",
     },
     branding: {
-      headline: "Brand identity and studio practice",
-      observationCopy: "You repeatedly noted branding and studio practice in your notes.",
+      headline: "Branding mentioned in your notes",
+      observationCopy: "You repeatedly mentioned branding in your notes about saved people.",
     },
   } as Record<string, { headline: string; observationCopy: string }>,
 };

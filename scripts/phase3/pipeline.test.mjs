@@ -48,7 +48,9 @@ test("reply cannot cite a retrieved item omitted from the finite context", async
 
 test("Reflection does not synthesize population claims from a truncated object sample", async () => {
   const candidates = Array.from({ length: 10 }, (_, i) => candidate(`person${i}`));
-  const result = await evidenceQuery({ ...request, mode: "reflect" }, {
+  const result = await evidenceQuery({ ...request, mode: "reflect", terms: [],
+    patternInputData: candidates.map(candidate => ({ id: candidate.id, name: candidate.id,
+      roles: [{ title: 'Web Developer', domain: 'web' }], notes: [], education: [] })) }, {
     async read() { return { candidates, population: { defined: true, total: 10, indexed: 10 } }; },
   }, { async generate() { assert.fail("reflection sample must not be synthesized"); } });
   assert.equal(result.matchedTotal, 10);

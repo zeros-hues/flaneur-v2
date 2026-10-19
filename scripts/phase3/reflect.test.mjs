@@ -49,6 +49,71 @@ function createMockPerson(id, name, overrides = {}) {
   };
 }
 
+const cohort = (domain, title) => [1, 2, 3].map(id => createMockPerson(`q${id}`, `Person ${id}`, { roles: [{ domain, title }] }));
+const domainPattern = (people, domain) => discoverPatterns({ people, totalPopulation: people.length }).find(pattern => pattern.dimensionValue === domain);
+
+test('Kat management roles do not establish web practice; threshold is recounted', () => {
+  const people = cohort('web', 'Web Developer');
+  people[2] = createMockPerson('kat', 'Kat Kampf', { roles: [
+    { title: 'Product Manager III', domain: 'web', organisationName: 'GitHub', description: 'Product for GitHub Education' },
+    { title: 'Program Manager II', domain: 'web', organisationName: 'Microsoft', description: 'Product owner for Azure Notebooks' },
+  ] });
+  assert.equal(domainPattern(people, 'web'), undefined);
+});
+
+test('Ananya needs the furniture description, which remains inspectable', () => {
+  const people = cohort('industrial-design', 'Industrial Designer');
+  people[2] = createMockPerson('ananya', 'Ananya Bagri', { roles: [{ id: 'akfd', title: 'Design Intern', domain: 'industrial-design', organisationName: 'AKFD' }] });
+  assert.equal(domainPattern(people, 'industrial-design'), undefined);
+  const description = 'Working closely with craftsmen and designers, I gained hands-on experience in creating bespoke furniture.';
+  people[2].roles[0].description = description;
+  const signal = domainPattern(people, 'industrial-design').supportingPeople.find(p => p.personId === 'ananya').signals[0];
+  assert.equal(signal.detail, description);
+  assert.equal(signal.provenance.roleId, 'akfd');
+  assert.equal(signal.provenance.legacyStatus, 'legacy_unverified');
+});
+
+test('Nivedha architecture and urban survey support cannot become industrial design', () => {
+  const people = cohort('industrial-design', 'Industrial Designer');
+  people[2] = createMockPerson('nivedha', 'Nivedha Nirmal', { roles: [
+    { title: 'Design Intern', organisationName: 'Balan and Nambisan Architects', domain: 'industrial-design' },
+    { title: 'Urban Design Intern', domain: 'industrial-design', description: 'Onsite urban survey and documentation, interaction with residents, and design intervention proposals.' },
+  ] });
+  assert.equal(domainPattern(people, 'industrial-design'), undefined);
+});
+
+test('Only statement-relevant notes corroborate roles; copy is historical', () => {
+  const people = cohort('web', 'Web Developer');
+  const initial = domainPattern(people, 'web');
+  people.forEach(p => p.notes.push({ id: p.id, body: 'interesting test good portfolio', targetKind: 'person' }));
+  const generic = domainPattern(people, 'web');
+  assert.equal(generic.compositeScore, initial.compositeScore);
+  assert.ok(generic.supportingPeople.every(p => p.signals.every(s => s.supportKind !== 'owner_authored_note')));
+  people.slice(0, 2).forEach(p => p.notes.push({ id: `${p.id}-relevant`, body: 'Creative web development', targetKind: 'person' }));
+  const relevant = domainPattern(people, 'web');
+  assert.ok(relevant.compositeScore > generic.compositeScore);
+  assert.match(relevant.observationCopy, /have worked/);
+});
+
+test('Reflect applies known exclusions and abstains on unknown constraint/date membership', () => {
+  const people = cohort('web', 'Web Developer');
+  const request = { mode: 'reflect', terms: [], constraints: [{ field: 'educated_at', value: 'EPFL' }], population: { defined: true, total: 3, indexed: 3 }, patternInputData: people };
+  const candidates = people.map(p => ({ id: p.id, facts: [], evidence: [], completeFields: ['educated_at'] }));
+  assert.equal(retrieveEvidence(request, candidates).state, 'no_match');
+  candidates[0].completeFields = [];
+  assert.equal(retrieveEvidence(request, candidates).state, 'insufficient_population');
+  const dateRequest = { ...request, constraints: [], encounteredBetween: { start: '2026-01-01', end: '2026-02-01' } };
+  assert.equal(retrieveEvidence(dateRequest, candidates).state, 'insufficient_population');
+  candidates.forEach(c => c.completeFields = ['encounter_date']);
+  assert.equal(retrieveEvidence(dateRequest, candidates).state, 'no_match');
+});
+
+test('Reflect cannot count supplied people outside candidate scope', () => {
+  const people = cohort('web', 'Web Developer');
+  const request = { mode: 'reflect', terms: [], constraints: [], population: { defined: true, total: 2, indexed: 2 }, patternInputData: people };
+  assert.equal(retrieveEvidence(request, people.slice(0, 2).map(p => ({ id: p.id, facts: [], evidence: [] }))).state, 'no_match');
+});
+
 // 1. Minimum support threshold (conservatively 3 independent People)
 test("1. Support threshold: requires at least 3 independent people; 2 people fail qualification", () => {
   const p1 = createMockPerson("p1", "Alice", {
@@ -112,23 +177,23 @@ test("3. Qualification: 3 independent people in domain 'web' produce a valid pat
   assert.equal(patterns[0].dimensionValue, "web");
   assert.equal(patterns[0].supportingPeopleCount, 3);
   assert.equal(patterns[0].supportingPeople.length, 3);
-  assert.ok(patterns[0].observationCopy.includes("creative web development"));
+  assert.ok(patterns[0].observationCopy.includes("web development"));
 });
 
 // 4. Specificity scoring: penalizes broad umbrella domain in favor of specific discipline
 test("4. Specificity scoring: specific domain 'industrial-design' outranks broad 'creative' despite equal counts", () => {
   // 3 people in industrial-design (high specificity)
   const idPeople = [
-    createMockPerson("id1", "Alice", { roles: [{ title: "ID 1", domain: "industrial-design" }] }),
-    createMockPerson("id2", "Bob", { roles: [{ title: "ID 2", domain: "industrial-design" }] }),
-    createMockPerson("id3", "Charlie", { roles: [{ title: "ID 3", domain: "industrial-design" }] }),
+    createMockPerson("id1", "Alice", { roles: [{ title: "Industrial Designer", domain: "industrial-design" }] }),
+    createMockPerson("id2", "Bob", { roles: [{ title: "Industrial Designer", domain: "industrial-design" }] }),
+    createMockPerson("id3", "Charlie", { roles: [{ title: "Industrial Designer", domain: "industrial-design" }] }),
   ];
 
   // 3 people in generic creative (broad penalty)
   const creativePeople = [
-    createMockPerson("c1", "Dave", { roles: [{ title: "Creative 1", domain: "creative" }] }),
-    createMockPerson("c2", "Eve", { roles: [{ title: "Creative 2", domain: "creative" }] }),
-    createMockPerson("c3", "Frank", { roles: [{ title: "Creative 3", domain: "creative" }] }),
+    createMockPerson("c1", "Dave", { roles: [{ title: "Creative Director", domain: "creative" }] }),
+    createMockPerson("c2", "Eve", { roles: [{ title: "Creative Director", domain: "creative" }] }),
+    createMockPerson("c3", "Frank", { roles: [{ title: "Creative Director", domain: "creative" }] }),
   ];
 
   const patterns = discoverPatterns({
@@ -200,7 +265,7 @@ test("6. Attention themes: repeated 'portfolio' notes across 3 people surface as
   const portfolioPattern = patterns.find((p) => p.dimensionValue === "distinctive_portfolio");
   assert.ok(portfolioPattern);
   assert.equal(portfolioPattern.supportingPeopleCount, 3);
-  assert.ok(portfolioPattern.observationCopy.includes("distinctive portfolios"));
+  assert.ok(portfolioPattern.observationCopy.includes("portfolios"));
 });
 
 // 7. No trajectory inference without reviewed trajectory
@@ -233,13 +298,13 @@ test("7. Invariant A + B != A -> B: education in Architecture + role in Branding
 test("8. Provenance honesty: structured roles are labeled 'structured_fact', notes as 'owner_authored_note'", () => {
   const p1 = createMockPerson("p1", "Alice", {
     roles: [{ title: "Web Developer", domain: "web", organisationName: "Impression" }],
-    notes: [{ id: "n1", body: "Many SOTD awards", targetKind: "person" }],
+    notes: [{ id: "n1", body: "Creative web development", targetKind: "person" }],
   });
   const p2 = createMockPerson("p2", "Bob", {
     roles: [{ title: "Frontend Lead", domain: "web", organisationName: "Code Resolution" }],
   });
   const p3 = createMockPerson("p3", "Charlie", {
-    roles: [{ title: "Creative Technologist", domain: "web", organisationName: "Disney" }],
+    roles: [{ title: "Creative Web Engineer", domain: "web", organisationName: "Disney" }],
   });
 
   const patterns = discoverPatterns({
@@ -287,9 +352,9 @@ test("9. Cold corpus: retrieveEvidence returns 'no_match' when no pattern meets 
 
 // 10. Integration via retrieveEvidence: returns matched patterns and candidates
 test("10. Integration: retrieveEvidence successfully discovers patterns and ranks matching candidates", () => {
-  const p1 = createMockPerson("p1", "Alice", { roles: [{ title: "Dev 1", domain: "web" }] });
-  const p2 = createMockPerson("p2", "Bob", { roles: [{ title: "Dev 2", domain: "web" }] });
-  const p3 = createMockPerson("p3", "Charlie", { roles: [{ title: "Dev 3", domain: "web" }] });
+  const p1 = createMockPerson("p1", "Alice", { roles: [{ title: "Web Developer", domain: "web" }] });
+  const p2 = createMockPerson("p2", "Bob", { roles: [{ title: "Web Developer", domain: "web" }] });
+  const p3 = createMockPerson("p3", "Charlie", { roles: [{ title: "Web Developer", domain: "web" }] });
 
   const reflectRequest = {
     mode: "reflect",

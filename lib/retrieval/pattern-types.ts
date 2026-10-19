@@ -38,7 +38,12 @@ export interface DiscoveredPattern {
 }
 
 export interface PatternInputRole {
+  id?: string;
   title: string;
+  description?: string | null;
+  classificationConfidence?: number | null;
+  classificationProvenance?: string | null;
+  legacyStatus?: 'legacy_unverified';
   domain?: string | null;
   organisationName?: string | null;
 }
@@ -63,7 +68,7 @@ export interface PatternInputPerson {
   roles: PatternInputRole[];
   education: PatternInputEducation[];
   notes: PatternInputNote[];
-  reviewedConcepts?: { conceptId: string; conceptLabel: string }[];
+  reviewedConcepts?: { conceptId: string; conceptLabel: string; reason?: string; observationId?: string; relationshipId?: string }[];
   reviewedTrajectories?: { from: string; to: string }[];
 }
 
