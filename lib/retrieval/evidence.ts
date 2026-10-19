@@ -13,7 +13,11 @@ export interface Evidence {
     representationId?: string; startCodepoint?: number; endCodepoint?: number;
     sourceUrl?: string;
     supportStatus?: string; locatorEvidenceIds?: string[];
-    relationship?:{id:string;predicate:'authored_by'|'profile_of';personId:string}|
+    trajectory?:{id:string;from:{id:string;label:string;kind:'concept'|'topic'};to:{id:string;label:string;kind:'concept'|'topic'};
+     order:'unknown'|'ordered'|'reversed'|'overlapping_or_uncertain';chronology?:import('../relationships/trajectory').TrajectoryChronology;
+     supportingObservationIds:string[];candidateId?:string};
+    relationship?:{id:string;predicate:'educated_at'|'employed_by';organisationId:string;organisationLabel:string;fieldOfStudy?:string}|
+     {id:string;predicate:'authored_by'|'profile_of';personId:string}|
      {id:string;predicate:'associated_with_concept';conceptId:string;conceptLabel:string;conceptKind:'concept'|'topic'} };
 }
 export interface Constraint { field: string; value: string }

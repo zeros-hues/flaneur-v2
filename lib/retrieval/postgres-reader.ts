@@ -23,7 +23,16 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
           or exists (select 1 from public.object_alias a where a.former_object_id in (o.id, o.subject_id))
           or exists (select 1 from public.observation_review v where v.observation_id = o.id)
           or exists (select 1 from public.observation n where n.supersedes_id = o.id)
-          or (o.field_key='reviewed_concept' and o.origin_key like 'reviewed-concept-decision-v1:%' and not exists(
+          or (o.field_key='reviewed_trajectory' and o.origin_key like 'explicit-trajectory-v1:%' and exists(
+       select 1 from jsonb_array_elements(jsonb_build_array(o.structured_value#>'{request,from}',o.structured_value#>'{request,to}')) endpoint
+       where not exists(select 1 from public.concept c join public.object_ref cr on cr.id=c.id and cr.archived_at is null
+        where c.id::text=endpoint->>'id' and c.label=endpoint->>'label' and c.kind::text=endpoint->>'kind'
+         and not exists(select 1 from public.object_alias a where a.former_object_id=c.id))))
+      or (o.field_key='reviewed_career' and o.origin_key like 'reviewed-career-decision-v1:%' and not exists(
+        select 1 from public.organisation org join public.object_ref cr on cr.id=org.id and cr.kind='organisation' and cr.archived_at is null
+        where org.id::text=o.structured_value->>'to_object_id' and org.display_name=o.structured_value#>>'{request,expectedOrganisation}'
+         and not exists(select 1 from public.object_alias a where a.former_object_id=org.id)))
+      or (o.field_key='reviewed_concept' and o.origin_key like 'reviewed-concept-decision-v1:%' and not exists(
             select 1 from public.concept c join public.object_ref cr on cr.id=c.id and cr.archived_at is null
             where c.id::text=o.structured_value->>'to_object_id' and c.label=o.structured_value#>>'{request,expectedConcept,label}'
               and c.kind::text=o.structured_value#>>'{request,expectedConcept,kind}'

@@ -40,7 +40,9 @@ export async function memoryQuery(question:string,referenceInstant:string,deps:M
   const items:MemoryItem[]=ranked.flatMap(({match,uncertain})=>{
     const label=byId.get(match.candidate.id);if(!label)return [];
     const supported=match.evidenceIds.map(id=>match.candidate.evidence.find(e=>e.id===id)!);
-    const evidence=[...supported.filter(e=>e.provenance?.relationship),...supported.filter(e=>!e.provenance?.relationship).slice(0,6)]
+    const supportIds=new Set(supported.flatMap(e=>e.provenance?.trajectory?.supportingObservationIds??[]));
+    for(const e of match.candidate.evidence)if(e.provenance?.observationId&&supportIds.has(e.provenance.observationId)&&!supported.some(v=>v.id===e.id))supported.push(e);
+    const evidence=[...supported.filter(e=>e.provenance?.relationship||e.provenance?.trajectory),...supported.filter(e=>!e.provenance?.relationship&&!e.provenance?.trajectory).slice(0,6)]
       .map(e=>memoryEvidenceExcerpt(e,[...plan.request.terms,...plan.request.constraints.map(c=>c.value)]));
     return [{...label,uncertain,evidence}];
   });

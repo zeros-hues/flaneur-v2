@@ -6,11 +6,15 @@ import {currentProfileProofs,currentProfileSupports,profileOrigin} from '../rela
 import {profileEdgeView} from '../relationships/profile-policy';
 import {migrationId} from '../migration/identity';
 import {conceptAssociationOrigin,conceptAssociationProofs} from '../relationships/concept-association';
+import {addCareerFilters} from './postgres-career';
+import {addTrajectoryFilters} from './postgres-trajectory';
 
 /** Caller owns the same read-only snapshot as ordinary retrieval. No notes or source text flow to the planner. */
 export async function addRelationshipFilters(sql:postgres.TransactionSql,request:Request,candidates:Candidate[]){
  const filters=request.constraints.filter(filter=>relationshipField(filter.field));if(!filters.length)return;
  relationshipScope(request);
+ await addTrajectoryFilters(sql,request,candidates);
+ await addCareerFilters(sql,request,candidates);
  if(filters.some(filter=>personRelationshipField(filter.field)))await addPersonRelationshipFilters(sql,request,candidates);
  if(filters.some(filter=>filter.field==='associated_with_concept'))await addConceptRelationshipFilters(sql,request,candidates);
  if(candidates.reduce((count,candidate)=>count+candidate.evidence.filter(item=>!!item.provenance?.relationship).length,0)>5000)

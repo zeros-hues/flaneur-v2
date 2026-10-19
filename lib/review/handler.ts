@@ -10,7 +10,7 @@ import { createPersonFromProfile,type PersonCreationStore } from "../identity/cr
 import { reassignProfileIdentity,type IdentityReassignmentStore } from '../identity/reassignment';
 
 const schema = z.object({ action: z.enum(["confirm_observation", "correct_observation", "reject_observation",
-  "archive_observation", "archive_person", "confirm_identity", "reject_identity", "create_person_from_profile", "reassign_identity", "review_authorship", "review_concept_association"]), payload: z.unknown() }).strict();
+  "archive_observation", "archive_person", "confirm_identity", "reject_identity", "create_person_from_profile", "reassign_identity", "review_authorship", "review_concept_association", "review_career", "review_trajectory"]), payload: z.unknown() }).strict();
 // Covers the service's 20,000 UTF-16 text units plus comment, even with JSON escape expansion.
 const MAX_BYTES = 144000;
 export interface ReviewDependencies {
@@ -19,6 +19,8 @@ export interface ReviewDependencies {
   personCreation:PersonCreationStore;
   identityReassignment:IdentityReassignmentStore;
   authorship:{decide(payload:unknown):Promise<unknown>};
+  trajectory?:{decide(payload:unknown):Promise<unknown>};
+  career?:{decide(payload:unknown):Promise<unknown>};
   conceptAssociation:{decide(payload:unknown):Promise<unknown>};
 }
 function reply(body: unknown, status: number, extra: Record<string, string> = {}) {
@@ -48,6 +50,8 @@ function failure(error: unknown) {
   if (error instanceof z.ZodError) return reply({ error: "invalid_review" }, 400);
   const code = error instanceof Error ? error.message : "";
   if(['CONCEPT_ASSOCIATION_REQUEST_CONFLICT','CONCEPT_ASSOCIATION_STALE','CONCEPT_ASSOCIATION_TARGET_UNAVAILABLE'].includes(code))return reply({error:'concept_association_conflict'},409);
+  if(['CAREER_REQUEST_CONFLICT','CAREER_STALE','CAREER_TARGET_UNAVAILABLE'].includes(code))return reply({error:'career_review_conflict'},409);
+  if(['TRAJECTORY_REQUEST_CONFLICT','TRAJECTORY_STALE','TRAJECTORY_TARGET_UNAVAILABLE','TRAJECTORY_SUPPORT_UNAVAILABLE'].includes(code))return reply({error:'trajectory_review_conflict'},409);
   if(code==='RELATIONSHIP_REVIEW_REQUIRED')return reply({error:'relationship_review_required'},409);
   if(['AUTHORSHIP_REQUEST_CONFLICT','AUTHORSHIP_STALE','AUTHORSHIP_TARGET_UNAVAILABLE'].includes(code))
     return reply({error:'authorship_review_conflict'},409);
@@ -96,6 +100,8 @@ export function reviewHandler(dependencies: ReviewDependencies, policy: {
         reject_identity: () => rejectProfileIdentity(payload, dependencies.identityRejection),
         create_person_from_profile:()=>createPersonFromProfile(payload,dependencies.personCreation),
         reassign_identity:()=>reassignProfileIdentity(payload,dependencies.identityReassignment),
+        review_trajectory:()=>{if(!dependencies.trajectory)throw new Error('TRAJECTORY_UNAVAILABLE');return dependencies.trajectory.decide(payload);},
+        review_career:()=>{if(!dependencies.career)throw new Error('CAREER_UNAVAILABLE');return dependencies.career.decide(payload);},
         review_authorship:()=>dependencies.authorship.decide(payload),
         review_concept_association:()=>dependencies.conceptAssociation.decide(payload),
       })[action]();

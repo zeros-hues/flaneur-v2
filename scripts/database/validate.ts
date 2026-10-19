@@ -1,3 +1,5 @@
+import {validateTrajectory} from './validate-trajectory';
+import {validateCareer} from './validate-career';
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
@@ -42,6 +44,7 @@ import {validateProfileRelationships} from './validate-profile-relationships';
 import {validateAuthorship} from './validate-authorship';
 import {validateRelationshipRetrieval} from './validate-relationship-retrieval';
 import {validateConceptAssociations} from './validate-concept-associations';
+import {validateConceptRetrieval} from './validate-concept-retrieval';
 import { validateNoteAuthoring } from "./validate-note-authoring";
 import { validateMemoryQuery } from "./validate-memory-query";
 import { markValidationStage } from "./validation-stage";
@@ -369,4 +372,33 @@ export async function validateConceptAssociationsOnly(connection:Connection){
  assert.deepEqual(await counts(connection),before);assert.deepEqual(await extra(),prior);
  return {status:'concept_association_validation_passed',connection_setting:'DIRECT_URL',checks:checks+2,
   fixtures_rolled_back:true,aggregate_counts_unchanged:true,real_decision_submitted:false};
+}
+export async function validateConceptRetrievalOnly(connection:Connection){
+ const before=await counts(connection);
+ const extra=()=>connection`select (select count(*)::int from public.relationship) as relationships,
+  (select count(*)::int from public.relationship_support) as supports,(select count(*)::int from public.concept) as concepts`;
+ const prior=await extra(),checks=await validateConceptRetrieval(connection);
+ assert.deepEqual(await counts(connection),before);assert.deepEqual(await extra(),prior);
+ return {status:'concept_retrieval_validation_passed',connection_setting:'DIRECT_URL',checks:checks+2,
+  fixtures_rolled_back:true,aggregate_counts_unchanged:true,real_query_submitted:false,provider_called:false};
+}
+
+export async function validateCareerOnly(connection:Connection){
+ const before=await counts(connection);
+ const extra=()=>connection`select (select count(*)::int from public.relationship) as relationships,
+  (select count(*)::int from public.relationship_support) as supports,(select count(*)::int from public.organisation) as organisations,
+  (select count(*)::int from public.education) as education,(select count(*)::int from public.role) as roles`;
+ const prior=await extra(),checks=await validateCareer(connection);
+ assert.deepEqual(await counts(connection),before);assert.deepEqual(await extra(),prior);
+ return {status:'career_validation_passed',connection_setting:'DIRECT_URL',checks:checks+2,fixtures_rolled_back:true,aggregate_counts_unchanged:true,provider_called:false};
+}
+
+export async function validateTrajectoryOnly(connection:Connection){
+ const before=await counts(connection);
+ const extra=()=>connection`select (select count(*)::int from public.relationship) as relationships,
+  (select count(*)::int from public.relationship_support) as supports,(select count(*)::int from public.concept) as concepts,
+  (select count(*)::int from public.organisation) as organisations,(select count(*)::int from public.education) as education,(select count(*)::int from public.role) as roles`;
+ const prior=await extra(),checks=await validateTrajectory(connection);
+ assert.deepEqual(await counts(connection),before);assert.deepEqual(await extra(),prior);
+ return {status:'trajectory_validation_passed',connection_setting:'DIRECT_URL',checks:checks+2,fixtures_rolled_back:true,aggregate_counts_unchanged:true,provider_called:false};
 }

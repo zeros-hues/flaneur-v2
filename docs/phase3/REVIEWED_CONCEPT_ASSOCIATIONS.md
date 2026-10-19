@@ -1,5 +1,7 @@
 # Reviewed Concept associations
 
+Follow-up, 2026-10-18: [reviewed Concept retrieval](REVIEWED_CONCEPT_RETRIEVAL.md) now filters People/Artifacts by these direct owner associations, including supported author/Concept combinations. The original review implementation and validation record below are retained.
+
 Implemented locally, 2026-10-18. Owners can associate an existing Person or Artifact with an existing Concept and preserve their reason. Person/Artifact pages provide explicit review controls; Concept pages provide reverse inspection and withdrawal. The existing 0017 schema supports this slice without a migration.
 
 ## Product meaning

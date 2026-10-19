@@ -86,6 +86,25 @@ try{
   body:JSON.stringify({action:'review_concept_association',payload:{requestId:randomUUID(),subjectId:id,conceptId:randomUUID(),decision:'confirm',expectedConcept:{label:'Idea',kind:'concept'},reason:'Fixture only.'}})});
  assert.equal(conceptWrite.status,401);assert.deepEqual(await conceptWrite.json(),{error:'unauthorised'});
  assert.equal(conceptWrite.headers.get('cache-control'),'no-store');assert.equal(conceptWrite.headers.get('x-content-type-options'),'nosniff');checks+=4;
+ stage='career_authorisation';
+ for(const path of [`/api/career/${id}`,`/api/career/not-a-uuid?q=x&q=y`]){
+  const response=await fetch(base+path,{headers:{'x-capture-secret':'source-review-http-fixture'}});
+  assert.equal(response.status,401);assert.deepEqual(await response.json(),{error:'unauthorised'});
+  assert.equal(response.headers.get('cache-control'),'no-store');checks+=3;
+ }
+ const careerMethod=await fetch(`${base}/api/career/${id}`,{method:'POST'});assert.equal(careerMethod.status,405);await careerMethod.arrayBuffer();checks++;
+ const careerForeign=await fetch(`${base}/api/career/${id}`,{headers:{origin:'https://foreign.test'}});assert.equal(careerForeign.status,403);await careerForeign.arrayBuffer();checks++;
+ const careerWrite=await fetch(`${base}/api/review`,{method:'POST',headers:{origin:'https://flaneur.example','content-type':'application/json','x-capture-secret':'source-review-http-fixture'},body:JSON.stringify({action:'review_career',payload:{decision:'confirm'}})});
+ assert.equal(careerWrite.status,401);assert.deepEqual(await careerWrite.json(),{error:'unauthorised'});checks+=2;
+ stage='trajectory_authorisation';
+ for(const path of [`/api/trajectory/${id}`,`/api/trajectory/not-a-uuid?q=x&q=y`]){
+  const response=await fetch(base+path,{headers:{'x-capture-secret':'source-review-http-fixture'}});
+  assert.equal(response.status,401);assert.deepEqual(await response.json(),{error:'unauthorised'});assert.equal(response.headers.get('cache-control'),'no-store');checks+=3;
+ }
+ const trajectoryMethod=await fetch(`${base}/api/trajectory/${id}`,{method:'POST'});assert.equal(trajectoryMethod.status,405);await trajectoryMethod.arrayBuffer();checks++;
+ const trajectoryForeign=await fetch(`${base}/api/trajectory/${id}`,{headers:{origin:'https://foreign.test'}});assert.equal(trajectoryForeign.status,403);await trajectoryForeign.arrayBuffer();checks++;
+ const trajectoryWrite=await fetch(`${base}/api/review`,{method:'POST',headers:{origin:'https://flaneur.example','content-type':'application/json','x-capture-secret':'source-review-http-fixture'},body:JSON.stringify({action:'review_trajectory',payload:{decision:'confirm'}})});
+ assert.equal(trajectoryWrite.status,401);assert.deepEqual(await trajectoryWrite.json(),{error:'unauthorised'});checks+=2;
  console.log(JSON.stringify({status:'source_identity_http_validation_passed',checks,synthetic_configuration:true,real_owner_login:false,real_database_connected:false}));
 }catch{console.error(JSON.stringify({status:'source_identity_http_validation_failed',stage,last_status:lastStatus,completed_checks:checks}));process.exitCode=1;}
 finally{if(child.exitCode===null&&child.signalCode===null)await new Promise(resolve=>{child.once('exit',resolve);child.kill();});}

@@ -29,7 +29,7 @@ function ReviewControls({ observation, refresh }: { observation: InspectedObserv
     finally { setBusy(false); }
   }
   if (observation.identityProof) return <p className="quiet small">Review this association on its captured source.</p>;
-  if (observation.relationshipReview) return <p className="quiet small">Review this association in reviewed Concept relationships.</p>;
+  if (observation.relationshipReview) return <p className="quiet small">Review this assertion in its dedicated Concept, education/employment or trajectory panel.</p>;
   if (!observation.active) return null;
   return <div className="observation-controls">
     {!action ? <div className="observation-actions">

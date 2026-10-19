@@ -14,9 +14,9 @@ try {
   validation = await import(pathToFileURL(outfile).href);
   client = postgres(databaseUrl("DIRECT_URL"), { max: 2, connect_timeout: 15, idle_timeout: 5, onnotice: () => {} });
   const mode = process.argv.slice(2);
-  if (mode.length > 1 || (mode.length && !["--sessions-only", "--throttle-only", "--export-only", "--reviews-only", "--inspection-only", "--identity-inspection-only", "--archive-compatibility-only", "--notes-only", "--memory-query-only", "--contextual-walk-only", "--walk-sessions-only", "--walk-contention-only", "--memory-inspection-only", "--memory-trail-only", "--capture-runtime-only", "--source-resolution-only", "--person-creation-only", "--identity-reassignment-only", "--profile-relationships-only", "--authorship-only", "--relationship-retrieval-only", "--concept-associations-only"].includes(mode[0])))
+  if (mode.length > 1 || (mode.length && !["--sessions-only", "--throttle-only", "--export-only", "--reviews-only", "--inspection-only", "--identity-inspection-only", "--archive-compatibility-only", "--notes-only", "--memory-query-only", "--contextual-walk-only", "--walk-sessions-only", "--walk-contention-only", "--memory-inspection-only", "--memory-trail-only", "--capture-runtime-only", "--source-resolution-only", "--person-creation-only", "--identity-reassignment-only", "--profile-relationships-only", "--authorship-only", "--relationship-retrieval-only", "--concept-associations-only", "--concept-retrieval-only", "--career-only", "--trajectory-only"].includes(mode[0])))
     throw Object.assign(new Error("Invalid validation mode"), { code: "INVALID_VALIDATION_MODE" });
-  const run = mode[0] === "--sessions-only" ? validation.validateSessionsOnly :
+  const run = mode[0] === "--trajectory-only" ? validation.validateTrajectoryOnly : mode[0] === "--career-only" ? validation.validateCareerOnly : mode[0] === "--sessions-only" ? validation.validateSessionsOnly :
     mode[0] === "--throttle-only" ? validation.validateThrottleOnly :
     mode[0] === "--export-only" ? validation.validateExportOnly :
     mode[0] === "--reviews-only" ? validation.validateReviewsOnly :
@@ -37,7 +37,8 @@ try {
     mode[0] === "--profile-relationships-only" ? validation.validateProfileRelationshipsOnly :
     mode[0] === "--authorship-only" ? validation.validateAuthorshipOnly :
     mode[0] === "--relationship-retrieval-only" ? validation.validateRelationshipRetrievalOnly :
-    mode[0] === "--concept-associations-only" ? validation.validateConceptAssociationsOnly : validation.validate;
+    mode[0] === "--concept-associations-only" ? validation.validateConceptAssociationsOnly :
+    mode[0] === "--concept-retrieval-only" ? validation.validateConceptRetrievalOnly : validation.validate;
   console.log(JSON.stringify(await run(client)));
 } catch (error) {
   console.error(JSON.stringify({ stage: validation?.validationStage() ?? "setup" }));

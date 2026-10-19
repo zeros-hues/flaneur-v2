@@ -51,7 +51,8 @@ export async function validateRelationshipRetrieval(connection:Connection){
   const item=matched.items[0]!,artifact=item.id;equal(item.kind,'artifact');equal(item.uncertain,false);
   const support=item.evidence.find(row=>row.provenance?.relationship)!;
   equal(support.layer,'user');equal(support.filterOnly,true);equal(support.provenance!.observationId,proof.observationId);
-  equal(support.provenance!.relationship!.personId,one);equal(support.provenance!.relationship!.predicate,'authored_by');
+  const authorRelationship=support.provenance!.relationship!;equal(authorRelationship.predicate,'authored_by');
+  if(authorRelationship.predicate==='authored_by')equal(authorRelationship.personId,one);
   equal(support.provenance!.snapshotId,post.snapshotId);equal(support.provenance!.encounterId,post.encounterId);
   equal(item.evidence.some(row=>row.layer==='source'&&row.provenance?.representationId&&row.text.includes(topic)),true);
   equal((await run('profile_of')).items.length,0);equal((await run('authored_by',name,[])).items.length,1);

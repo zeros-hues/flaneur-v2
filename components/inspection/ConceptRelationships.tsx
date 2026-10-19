@@ -35,7 +35,7 @@ function ConceptPanel({kind,id}:{kind:'person'|'artifact'|'concept';id:string}){
   }catch{setMessage('The association could not be confirmed. Retry uses the same decision.');}
   finally{working.current=false;setBusy(false);}
  }
- return <section aria-label="Reviewed Concept relationships" style={{overflowWrap:'anywhere'}}>
+ return <section id={`reviewed-concept-relationships-${kind}-${id}`} aria-label="Reviewed Concept relationships" style={{overflowWrap:'anywhere'}}>
   <h2>Reviewed Concept relationships</h2>
   <p className="quiet small">These associations record your interpretation and exact reason. They do not establish that a source mentions the idea. Stored Concept categories, source hashtags and earlier inferred links remain separate.</p>
   {!page&&<button type="button" className="textlink" disabled={busy} onClick={()=>void inspect()}>{busy?'loading…':'inspect Concept relationships'}</button>}

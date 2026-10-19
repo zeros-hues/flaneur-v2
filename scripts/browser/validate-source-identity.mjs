@@ -25,6 +25,15 @@ const relationshipMemory={type:'memory',mode:'recall',interpretation:'Synthetic 
  items:['authored_by','profile_of'].map((predicate,index)=>({id:index?queryProfileArtifact:artifact,kind:'artifact',label:index?'Saved profile':'Saved post',uncertain:false,
   evidence:[{id:`query-${predicate}`,objectId:index?queryProfileArtifact:artifact,text:index?'Confirmed the captured profile association.':'Exact reviewed authorship reason.',layer:'user',verified:true,filterOnly:true,
    provenance:{snapshotId:index?queryProfileSnapshot:snapshot,encounterId:supportEncounter,relationship:{id:relationship,predicate,personId:people[0]}}}]}))};
+const conceptMemory={type:'memory',mode:'recall',interpretation:'Synthetic reviewed Concept recall',state:'matches',questions:[],matchedTotal:2,uncertainTotal:0,evaluated:2,
+ items:['person','artifact'].map((kind,index)=>({id:index?queryProfileArtifact:people[1],kind,label:index?'Saved discovery':'Synthetic person',uncertain:false,
+  evidence:[{id:`concept-query-${kind}`,objectId:index?queryProfileArtifact:people[1],text:'I associated this discovery with the idea.',layer:'user',verified:true,filterOnly:true,
+   provenance:{observationId:randomUUID(),supportStatus:'owner_reviewed_interpretation',relationship:{id:randomUUID(),predicate:'associated_with_concept',conceptId:reviewedConcept,conceptLabel:'Correspondence',conceptKind:'concept'}}}]}))};
+const careerOrg=randomUUID(),careerRequests=[],careerReceipts=new Map();let careerProof=null,careerWithdrawal=null,loseCareerAck=true,failCareerRead=false;
+const careerMemory={type:'memory',mode:'recall',interpretation:'Synthetic career recall',state:'matches',questions:[],matchedTotal:1,uncertainTotal:0,evaluated:1,items:[{id:people[0],kind:'person',label:'Synthetic Ada',uncertain:false,evidence:[{id:'career-result',objectId:people[0],text:'Exact reviewed education reason.',layer:'user',verified:true,filterOnly:true,provenance:{observationId:randomUUID(),supportStatus:'owner_reviewed',relationship:{id:randomUUID(),predicate:'educated_at',organisationId:careerOrg,organisationLabel:'EPFL',fieldOfStudy:'Mechanical engineering'}}}]}]};
+const trajectoryFrom={id:randomUUID(),label:'Mechanical engineering',kind:'concept'},trajectoryTo={id:randomUUID(),label:'AI',kind:'concept'};
+const trajectoryRequests=[],trajectoryReceipts=new Map(),trajectoryRecords=[];let loseTrajectoryAck=true,failTrajectoryRead=false;
+const trajectoryMemory={type:'memory',mode:'recall',interpretation:'Synthetic directed transition',state:'matches',questions:[],matchedTotal:1,uncertainTotal:0,evaluated:1,items:[{id:people[0],kind:'person',label:'Synthetic Ada',uncertain:false,evidence:[{id:'trajectory-result',objectId:people[0],text:'Exact owner transition reason.',layer:'user',verified:true,filterOnly:true,provenance:{observationId:randomUUID(),supportStatus:'owner_reviewed_transition',trajectory:{id:randomUUID(),from:trajectoryFrom,to:trajectoryTo,order:'unknown',supportingObservationIds:[]}}}]}]};
 const associatedPerson=()=>reassignedTo??createdPerson??people[1];
 const associatedName=()=>reassignedTo?'Synthetic Ada':createdName||'Synthetic Ada';
 const pending=new Map(),requests=[],receipts=new Map(),sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -43,13 +52,22 @@ async function evaluate(expression){const result=await call('Runtime.evaluate',{
 async function until(expression){for(let i=0;i<100;i++){if(await evaluate(expression))return;await sleep(100);}throw new Error('BROWSER_CONDITION_TIMEOUT');}
 async function click(label,index=0){assert.equal(await evaluate(`(()=>{const button=[...document.querySelectorAll('button')].filter(b=>b.textContent===${JSON.stringify(label)}&&!b.disabled)[${index}];if(!button)return false;button.click();return true;})()`),true);}
 try{
- const output=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {SourceIdentityReview} from './components/inspection/SourceIdentityReview';import {ProfileRelationships} from './components/inspection/ProfileRelationships';import {SourceAuthorshipReview} from './components/inspection/SourceAuthorshipReview';import {AuthorshipRelationships} from './components/inspection/AuthorshipRelationships';import {MemoryBlock} from './components/query/MemoryBlock';import {ConceptRelationships} from './components/inspection/ConceptRelationships';createRoot(document.getElementById('root')).render(<><SourceIdentityReview snapshotId="${snapshot}"/><ProfileRelationships kind="artifact" id="${artifact}"/><SourceAuthorshipReview snapshotId="${snapshot}"/><AuthorshipRelationships kind="artifact" id="${artifact}"/><AuthorshipRelationships kind="person" id="${people[0]}"/><ConceptRelationships kind="artifact" id="${artifact}"/><ConceptRelationships kind="concept" id="${reviewedConcept}"/></>);window.renderRelationshipMemory=()=>{const host=document.createElement('div');host.id='relationship-memory-fixture';document.body.appendChild(host);createRoot(host).render(<MemoryBlock block={${JSON.stringify(relationshipMemory)}} at={0}/>);};`,resolveDir:resolve('.'),loader:'tsx'},
+ const output=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {SourceIdentityReview} from './components/inspection/SourceIdentityReview';import {ProfileRelationships} from './components/inspection/ProfileRelationships';import {SourceAuthorshipReview} from './components/inspection/SourceAuthorshipReview';import {AuthorshipRelationships} from './components/inspection/AuthorshipRelationships';import {MemoryBlock} from './components/query/MemoryBlock';import {ConceptRelationships} from './components/inspection/ConceptRelationships';import {CareerRelationships} from './components/inspection/CareerRelationships';import {TrajectoryRelationships} from './components/inspection/TrajectoryRelationships';createRoot(document.getElementById('root')).render(<><SourceIdentityReview snapshotId="${snapshot}"/><ProfileRelationships kind="artifact" id="${artifact}"/><SourceAuthorshipReview snapshotId="${snapshot}"/><AuthorshipRelationships kind="artifact" id="${artifact}"/><AuthorshipRelationships kind="person" id="${people[0]}"/><ConceptRelationships kind="artifact" id="${artifact}"/><ConceptRelationships kind="concept" id="${reviewedConcept}"/></>);window.renderTrajectory=()=>{const host=document.createElement('div');host.id='trajectory-fixture';document.body.appendChild(host);createRoot(host).render(<><TrajectoryRelationships id="${people[0]}"/><div id="trajectory-memory-fixture"><MemoryBlock block={${JSON.stringify(trajectoryMemory)}} at={0}/></div></>);};window.renderCareer=()=>{const host=document.createElement('div');host.id='career-fixture';document.body.appendChild(host);createRoot(host).render(<><CareerRelationships id="${people[0]}"/><div id="career-memory-fixture"><MemoryBlock block={${JSON.stringify(careerMemory)}} at={0}/></div></>);};window.renderRelationshipMemory=()=>{const host=document.createElement('div');host.id='relationship-memory-fixture';document.body.appendChild(host);createRoot(host).render(<MemoryBlock block={${JSON.stringify(relationshipMemory)}} at={0}/>);};window.renderConceptMemory=()=>{const host=document.createElement('div');host.id='concept-memory-fixture';document.body.appendChild(host);createRoot(host).render(<MemoryBlock block={${JSON.stringify(conceptMemory)}} at={0}/>);};`,resolveDir:resolve('.'),loader:'tsx'},
   bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent',plugins:[{
    name:'fixture-link',setup(plugin){plugin.onResolve({filter:/^next\/link$/},()=>({path:'link',namespace:'fixture'}));
     plugin.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'import React from "react";export default function Link(props){return <a {...props}/>}',loader:'jsx',resolveDir:resolve('.')}));}
   }]});const js=output.outputFiles[0].text;
  server=createServer(async(req,res)=>{
   res.setHeader('cache-control','no-store');
+  if(req.url.startsWith('/api/trajectory/')){
+   res.setHeader('content-type','application/json');if(failTrajectoryRead){res.statusCode=503;return res.end('{}');}
+   return res.end(JSON.stringify({id:people[0],available:true,items:trajectoryRecords,nextCursor:null,concepts:new URL(req.url,'http://fixture').searchParams.has('q')?[trajectoryFrom,trajectoryTo]:[],nextSearchCursor:null}));
+  }
+  if(req.url.startsWith('/api/career/')){
+   res.setHeader('content-type','application/json');if(failCareerRead){res.statusCode=503;return res.end('{}');}
+   const params=new URL(req.url,'http://fixture').searchParams;
+   return res.end(JSON.stringify({id:people[0],available:true,items:careerProof?[{id:relationship,organisationId:careerOrg,label:'EPFL',predicate:'educated_at',state:careerWithdrawal?'candidate':'active',status:careerWithdrawal?'historical / unsupported':'owner-reviewed',historyCount:1,history:[{...careerProof,current:!careerWithdrawal,withdrawable:!careerWithdrawal,withdrawalReason:careerWithdrawal}],nextHistoryCursor:null}]:[],nextCursor:null,organisations:params.has('q')?[{id:careerOrg,label:'EPFL'}]:[],nextSearchCursor:null}));
+  }
   if(req.url.startsWith('/api/concept-associations/')){
    conceptReads.push(req.url);res.setHeader('content-type','application/json');if(failConceptRead){res.statusCode=503;return res.end('{}');}
    const params=new URL(req.url,'http://fixture').searchParams,kind=req.url.includes('/concept/')?'concept':'artifact',id=kind==='concept'?reviewedConcept:artifact;
@@ -85,6 +103,27 @@ try{
   if(req.url==='/api/review'){
    res.setHeader('content-type','application/json');let text='';for await(const chunk of req)text+=chunk;
    const input=JSON.parse(text);requests.push(input);
+   if(input.action==='review_trajectory'){
+    trajectoryRequests.push(input);const payload=input.payload;
+    if(!trajectoryReceipts.has(payload.requestId)){
+     const observationId=payload.observationId??randomUUID(),created=payload.decision==='confirm'||payload.decision==='correct';
+     const receipt={observationId:created?randomUUID():observationId,replayed:false};trajectoryReceipts.set(payload.requestId,receipt);
+     const replaced=payload.observationId??payload.candidateId,old=trajectoryRecords.find(v=>v.id===replaced);
+     if(old){old.current=false;old.confirmed=false;old.reviewable=false;old.reviews.push({id:randomUUID(),decision:created?(payload.decision==='correct'?'corrected':'confirmed'):'rejected',comment:payload.reason,replacementId:created?receipt.observationId:null,reviewedAt:'2026-10-18 00:00:00+00'});}
+     if(created)trajectoryRecords.push({id:receipt.observationId,claim:payload,layer:'user',text:payload.reason,recordedAt:'2026-10-18 00:00:00+00',order:payload.chronology?'ordered':'unknown',reviewable:true,current:true,confirmed:true,evidence:old?.evidence??[],reviews:[]});
+    }
+    if(loseTrajectoryAck){loseTrajectoryAck=false;res.statusCode=503;return res.end('{}');}
+    return res.end(JSON.stringify(trajectoryReceipts.get(payload.requestId)));
+   }
+   if(input.action==='review_career'){
+    careerRequests.push(input);const payload=input.payload;
+    if(!careerReceipts.has(payload.requestId)){
+     const receipt={observationId:payload.observationId??randomUUID(),replayed:false};careerReceipts.set(payload.requestId,receipt);
+     if(payload.decision==='confirm'){careerProof={id:receipt.observationId,...payload};careerWithdrawal=null;}else careerWithdrawal=payload.reason;
+    }
+    if(loseCareerAck){loseCareerAck=false;res.statusCode=503;return res.end('{}');}
+    return res.end(JSON.stringify(careerReceipts.get(payload.requestId)));
+   }
    if(input.action==='review_concept_association'){
     conceptRequests.push(input);const payload=input.payload;
     if(!conceptReceipts.has(payload.requestId)){
@@ -285,6 +324,70 @@ try{
  failConceptRead=false;conceptAvailable=false;await click('inspect Concept relationships',0);await until("document.body.innerText.includes('This object is inactive.')");
  assert.equal(await evaluate(`!!document.querySelector('#concept-search-${artifact}')`),false);checks++;
  assert.equal(conceptRequests.length,4);assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'),true);checks+=2;
+ stage='concept_retrieval_memory_labels';await evaluate('window.renderConceptMemory()');await until("!!document.querySelector('#concept-memory-fixture .observation-evidence')");
+ assert.equal(await evaluate("[...document.querySelectorAll('#concept-memory-fixture .observation-evidence')].filter(e=>e.innerText.includes('Your reviewed Concept association — interpretation, not a source mention')).length"),2);checks++;
+ assert.equal(await evaluate(`document.querySelectorAll('#concept-memory-fixture a[href="/concept/${reviewedConcept}"]').length`),2);checks++;
+ assert.equal(await evaluate(`!!document.querySelector('#concept-memory-fixture a[href="/person/${people[1]}#reviewed-concept-relationships-person-${people[1]}"]')`),true);checks++;
+ assert.equal(await evaluate(`!!document.querySelector('#concept-memory-fixture a[href="/artifact/${queryProfileArtifact}#reviewed-concept-relationships-artifact-${queryProfileArtifact}"]')`),true);checks++;
+ assert.equal(await evaluate("document.querySelectorAll('#concept-memory-fixture a[href^=\"/snapshot/\"], #concept-memory-fixture a[href^=\"/encounter/\"]').length"),0);checks++;
+ assert.equal(await evaluate("document.querySelector('#concept-memory-fixture').innerText.includes('Concept at decision: Correspondence (concept).')"),true);checks++;
+ assert.equal(await evaluate("document.querySelector('#concept-memory-fixture').innerText.includes('Source text')"),false);checks++;
+ assert.equal(conceptRequests.length,4);checks++;
+ stage='career_review_and_provenance';await evaluate('window.renderCareer()');await until("!!document.querySelector('#career-fixture')");
+ assert.equal(careerRequests.length,0);checks++;
+ await click('Inspect education/employment');await until("document.querySelector('#career-fixture').innerText.includes('Find an existing organisation')");
+ await evaluate("document.querySelector('#career-fixture input').focus()");await call('Input.insertText',{text:'EPFL'});await click('Find organisations');
+ await until(`document.querySelector('#career-fixture').innerText.includes('EPFL — organisation:${careerOrg}')`);await click(`EPFL — organisation:${careerOrg}`);
+ await evaluate("document.querySelectorAll('#career-fixture input')[1].focus()");await call('Input.insertText',{text:'Mechanical engineering'});
+ const careerReason='  Exact reviewed education reason.\n';await evaluate("document.querySelector('#career-fixture textarea').focus()");await call('Input.insertText',{text:careerReason});await click('Review statement');
+ assert.equal(careerRequests.length,0);checks++;assert.equal(await evaluate("document.querySelector('#career-fixture').innerText.includes('Field of study: Mechanical engineering')"),true);checks++;
+ await click('Confirm reviewed decision');await until("document.querySelector('#career-fixture').innerText.includes('Save was not acknowledged')");
+ assert.equal(careerRequests[0].payload.reason,careerReason);assert.equal(careerRequests[0].payload.expectedOrganisation,'EPFL');assert.equal(careerRequests[0].payload.fieldOfStudy,'Mechanical engineering');checks+=3;
+ await click('Confirm reviewed decision');await until("document.querySelector('#career-fixture').innerText.includes('owner-reviewed · 1 recorded decisions')");
+ assert.equal(careerRequests.length,2);assert.deepEqual(careerRequests[0],careerRequests[1]);checks+=2;
+ assert.equal(await evaluate("document.querySelector('#career-memory-fixture').innerText.includes('Your reviewed education/employment assertion — not independently verified')"),true);checks++;
+ assert.equal(await evaluate(`!!document.querySelector('#career-memory-fixture a[href="/person/${people[0]}#reviewed-career-${people[0]}"]')`),true);checks++;
+ assert.equal(await evaluate("document.querySelector('#career-memory-fixture').innerText.includes('Studied at EPFL — Mechanical engineering')"),true);checks++;
+ assert.equal(await evaluate("document.querySelectorAll('#career-memory-fixture a[href^=\"/snapshot/\"],#career-memory-fixture a[href^=\"/encounter/\"]').length"),0);checks++;
+ await evaluate("document.querySelector('#career-fixture textarea').focus()");await call('Input.insertText',{text:'Correcting the education statement.'});await click('Review withdrawal of this statement');
+ assert.equal(careerRequests.length,2);checks++;await click('Confirm reviewed decision');await until("document.querySelector('#career-fixture').innerText.includes('Withdrawal reason: Correcting the education statement.')");
+ assert.equal(careerRequests[2].payload.observationId,careerProof.id);assert.equal(careerRequests[2].payload.decision,'reject');checks+=2;
+ failCareerRead=true;await click('Inspect education/employment');await until("document.querySelector('#career-fixture').innerText.includes('inspection is unavailable')");
+ assert.equal(await evaluate("document.querySelector('#career-fixture').innerText.includes('Organisation at decision: EPFL')"),false);assert.equal(careerRequests.length,3);checks+=2;
+ stage='trajectory_review';await evaluate('window.renderTrajectory()');await until("!!document.querySelector('#trajectory-fixture')");
+ await click('Inspect trajectories');await until("document.querySelector('#trajectory-fixture').innerText.includes('Find a saved transition Concept')");
+ assert.equal(trajectoryRequests.length,0);checks++;
+ await evaluate("document.querySelector('#trajectory-fixture input').focus()");await call('Input.insertText',{text:'engineering'});await click('Find trajectory Concepts');await until("document.querySelectorAll('#trajectory-fixture button').length>5");
+ await click('Use as origin',0);await click('Use as destination',1);
+ const trajectoryReason='  Reviewed explicit move.\n  ';await evaluate("document.querySelector('#trajectory-fixture textarea').focus()");await call('Input.insertText',{text:trajectoryReason});await click('Review trajectory statement');
+ assert.equal(trajectoryRequests.length,0);checks++;assert.equal(await evaluate("document.querySelector('#trajectory-fixture').innerText.includes('Mechanical engineering \u2192 AI')"),true);checks++;
+ await click('Save trajectory decision');await until("document.querySelector('#trajectory-fixture').innerText.includes('Save was not acknowledged')");
+ assert.equal(trajectoryRequests[0].payload.reason,trajectoryReason);assert.deepEqual(trajectoryRequests[0].payload.from,trajectoryFrom);assert.deepEqual(trajectoryRequests[0].payload.to,trajectoryTo);checks+=3;
+ await click('Save trajectory decision');await until("document.querySelector('#trajectory-fixture').innerText.includes('Current owner-reviewed explicit transition')");
+ assert.equal(trajectoryRequests.length,2);assert.deepEqual(trajectoryRequests[0],trajectoryRequests[1]);checks+=2;
+ assert.equal(await evaluate("document.querySelector('#trajectory-memory-fixture').innerText.includes('Your reviewed trajectory \u2014 explicit owner claim, not independently verified')"),true);checks++;
+ assert.equal(await evaluate(`!!document.querySelector('#trajectory-memory-fixture a[href="/person/${people[0]}#reviewed-trajectory-${people[0]}"]')`),true);checks++;
+ assert.equal(await evaluate("document.querySelector('#trajectory-memory-fixture').innerText.includes('Mechanical engineering \u2192 AI')"),true);checks++;
+ assert.equal(await evaluate("document.querySelector('#trajectory-memory-fixture').innerText.includes('Temporal order is unknown')"),true);checks++;
+ assert.equal(await evaluate("document.querySelectorAll('#trajectory-memory-fixture a[href^=\"/snapshot/\"]').length"),0);checks++;
+ stage='trajectory_correction';await click('Correct trajectory statement');await evaluate("document.querySelector('#trajectory-fixture textarea').focus()");await call('Input.insertText',{text:'Corrected explicit reason.'});
+ await click('Review trajectory statement');assert.equal(trajectoryRequests.length,2);checks++;await click('Save trajectory decision');await until("document.querySelector('#trajectory-fixture').innerText.includes('corrected: Corrected explicit reason.')");
+ assert.equal(trajectoryRequests[2].payload.decision,'correct');assert.equal(trajectoryRequests[2].payload.observationId,trajectoryRecords[0].id);checks+=2;
+ await evaluate("document.querySelector('#trajectory-fixture textarea').focus()");await call('Input.insertText',{text:'Withdraw the statement.'});await click('Withdraw / reject trajectory');await click('Save trajectory decision');
+ await until("document.querySelector('#trajectory-fixture').innerText.includes('rejected: Withdraw the statement.')");assert.equal(trajectoryRequests[3].payload.observationId,trajectoryRecords[1].id);checks++;
+ stage='trajectory_candidate';const candidateId=randomUUID(),candidateSupports=[randomUUID(),randomUUID()],candidateChronology={from:{start:'2018',end:'2021',ongoing:false},to:{start:'2022',end:'2024',ongoing:false}};
+ trajectoryRecords.push({id:candidateId,claim:{requestId:randomUUID(),personId:people[0],decision:'candidate',from:trajectoryFrom,to:trajectoryTo,reason:'Chronological inputs only.',supportingObservationIds:candidateSupports,chronology:candidateChronology},layer:'inferred',text:'Possible path, not a confirmed transition.',recordedAt:'2026-10-18 00:00:00+00',order:'ordered',reviewable:true,current:true,confirmed:false,evidence:[{id:'candidate-source',objectId:people[0],text:'Captured dated career evidence.',layer:'extracted',verified:true,provenance:{observationId:candidateSupports[0],snapshotId:snapshot,encounterId:supportEncounter}}],reviews:[]});
+ await click('Inspect trajectories');await until("document.querySelector('#trajectory-fixture').innerText.includes('Unconfirmed inferred candidate')");
+ assert.equal(await evaluate("document.querySelector('#trajectory-fixture').innerText.includes('dates alone do not establish a move')"),true);checks++;
+ assert.equal(await evaluate(`!!document.querySelector('#trajectory-fixture a[href="/snapshot/${snapshot}"]')`),true);assert.equal(await evaluate(`!!document.querySelector('#trajectory-fixture a[href="/encounter/${supportEncounter}"]')`),true);checks+=2;
+ assert.equal(trajectoryRequests.length,4);checks++;
+ await evaluate("document.querySelector('#trajectory-fixture textarea').focus()");await call('Input.insertText',{text:'I explicitly confirm the move after review.'});await click('Review candidate as explicit transition');
+ assert.equal(trajectoryRequests.length,4);checks++;await click('Save trajectory decision');await until("document.querySelector('#trajectory-fixture').innerText.includes('confirmed: I explicitly confirm the move after review.')");
+ assert.equal(trajectoryRequests[4].payload.candidateId,candidateId);assert.deepEqual(trajectoryRequests[4].payload.chronology,candidateChronology);checks+=2;
+ await evaluate("document.querySelector('#trajectory-fixture textarea').focus()");await call('Input.insertText',{text:'Archive reviewed claim.'});await click('Archive trajectory statement');await click('Save trajectory decision');await until("document.querySelector('#trajectory-fixture').innerText.includes('rejected: Archive reviewed claim.')");
+ assert.equal(trajectoryRequests[5].payload.decision,'archive');checks++;
+ failTrajectoryRead=true;await click('Inspect trajectories');await until("document.querySelector('#trajectory-fixture').innerText.includes('Trajectory inspection is unavailable')");
+ assert.equal(await evaluate("document.querySelector('#trajectory-fixture').innerText.includes('Captured dated career evidence.')"),false);assert.equal(trajectoryRequests.length,6);checks+=2;
  console.log(JSON.stringify({status:'source_identity_browser_validation_passed',checks,synthetic_api:true,real_owner_login:false,real_database_used:false}));
 }catch{console.error(JSON.stringify({status:'source_identity_browser_validation_failed',stage,completed_checks:checks}));process.exitCode=1;}
 finally{

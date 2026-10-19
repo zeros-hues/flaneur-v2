@@ -1,3 +1,5 @@
+import {TrajectoryRelationships} from '@/components/inspection/TrajectoryRelationships';
+import {CareerRelationships} from '@/components/inspection/CareerRelationships';
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Notes } from "@/components/person/Notes";
@@ -42,6 +44,8 @@ export default async function PersonPage({params,searchParams}:TrailParams) {
       <ProfileRelationships kind="person" id={view.id}/>
       <AuthorshipRelationships kind="person" id={view.id}/>
       <ConceptRelationships kind="person" id={view.id}/>
+      <CareerRelationships id={view.id}/>
+      <TrajectoryRelationships id={view.id}/>
       <h2>Recorded assertions and identity</h2>
       <ObservationInspector personId={view.id}/>
       <IdentityInspector personId={view.id} personName={view.name}/>
