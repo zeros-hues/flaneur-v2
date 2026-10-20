@@ -19,6 +19,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!isAuthorisedCapture(request.headers.get("x-capture-secret"))) {
     return Response.json({ error: "unauthorised" }, { status: 401 });
   }
+  if (process.env.CAPTURE_V2_ENABLED === 'true')
+    return Response.json({ error: 'legacy_capture_disabled_use_v2' }, { status: 410, headers: { 'cache-control': 'no-store' } });
 
   let json: unknown;
   try {

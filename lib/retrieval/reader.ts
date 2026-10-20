@@ -5,6 +5,7 @@ import { capturedSourceEvidence, type CapturedSourceRow } from "./captured-sourc
 
 export interface ObservationRow {
   id: string; subjectId: string; layer: TruthLayer; text: string; supportStatus: string;
+  semanticRole?: string;
   inactive?: boolean;
   derivation?: { snapshotId: string | null; fingerprint: string | null; identityObservationId: string | null;
     representationId: string | null } | null;

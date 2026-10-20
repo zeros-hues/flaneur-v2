@@ -9,7 +9,7 @@ import type { Lease } from "./worker";
 
 export interface ExtractionSnapshot {
   id: string; contentGzip: Buffer; contentHash: string; sourceUrl: string; adapterId: string;
-  kind: "profile_page" | "social_post";
+  kind: "profile_page" | "social_post" | "article";
   /** Supplied by an identity resolver; apply must revalidate this proof, never trust old person projection. */
   subject: { personId: string; identityObservationId: string } | null;
 }
@@ -17,6 +17,7 @@ export interface ExtractionResult {
   snapshotId: string; inputFingerprint: string; representation: Representation | null;
   fields: ExtractedField[]; subject: ExtractionSnapshot["subject"];
   state: "extracted" | "unresolved" | "quarantined";
+  adapterId?: string;
   omittedCount: number; code: "NORMALIZATION_FAILED" | null;
 }
 const decompress = promisify(gunzip);
@@ -26,7 +27,7 @@ export function extractionProcessor(read: (snapshotId: string) => Promise<Extrac
     const loaded = await read(lease.snapshotId);
     const snapshot = { ...loaded, contentGzip: Buffer.from(loaded.contentGzip),
       subject: loaded.subject ? { ...loaded.subject } : null };
-    if (snapshot.id !== lease.snapshotId || snapshot.adapterId !== "linkedin" ||
+    if (snapshot.id !== lease.snapshotId || !((snapshot.adapterId === "linkedin" && snapshot.kind !== "article") || (snapshot.adapterId === "web" && snapshot.kind === "article")) ||
         parseFingerprint({ contentHash: snapshot.contentHash, sourceUrl: snapshot.sourceUrl,
           adapterId: snapshot.adapterId, kind: snapshot.kind,
           identityObservationId: snapshot.subject?.identityObservationId ?? null }) !== lease.inputFingerprint)
@@ -36,7 +37,7 @@ export function extractionProcessor(read: (snapshotId: string) => Promise<Extrac
       throw new Error("SNAPSHOT_HASH_MISMATCH");
     const html = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     if (!await renew()) throw new Error("EXTRACTION_LEASE_LOST");
-    const base = { snapshotId: snapshot.id, inputFingerprint: lease.inputFingerprint, subject: snapshot.subject };
+    const base = { adapterId: snapshot.adapterId, snapshotId: snapshot.id, inputFingerprint: lease.inputFingerprint, subject: snapshot.subject };
     let source: Representation;
     try { source = normalizeCapture(snapshot.id, snapshot.kind, html); }
     catch {

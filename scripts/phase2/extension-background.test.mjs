@@ -9,6 +9,7 @@ async function fixture(initialValues={}){
  const values=structuredClone(initialValues),alarm=new Map();let trusted=false,failWrites=false,requests=[];
  const local={async setAccessLevel({accessLevel}){trusted=accessLevel==="TRUSTED_CONTEXTS";},async get(key){assert.equal(trusted,true);return structuredClone(key===null?values:{[key]:values[key]});},async set(next){if(failWrites)throw new Error("quota");Object.assign(values,structuredClone(next));},async remove(keys){for(const key of Array.isArray(keys)?keys:[keys])delete values[key];}};
  globalThis.chrome={runtime:{id:content.id,getURL:path=>`chrome-extension://${content.id}/${path}`,onStartup:event(),onInstalled:event(),onMessage:event(),openOptionsPage:async()=>{}},
+  action:{onClicked:event()},scripting:{executeScript:async()=>[]},
   storage:{local},contextMenus:{create(){},onClicked:event()},tabs:{sendMessage:async()=>{}},alarms:{onAlarm:event(),get:async name=>alarm.get(name),create:async(name,value)=>alarm.set(name,value)}};
  globalThis.fetch=async(endpoint,init)=>{requests.push({endpoint,payload:JSON.parse(init.body)});return Response.json({version:2,state:"saved",requestId:JSON.parse(init.body).requestId,snapshotId:randomUUID(),encounterId:randomUUID(),processing:"queued",replayed:false});};
  const bundle=await build({entryPoints:["extension/background.ts"],bundle:true,write:false,platform:"browser",format:"esm",define:{__APP_URL__:'"https://fixture.example.test"'}});
@@ -52,4 +53,15 @@ test("mismatched saved receipt cannot claim that another capture was saved",asyn
  f.values["flaneur-saved-v2:"+payload.requestId]={requestId:randomUUID(),payloadHash:"a".repeat(64),savedAt:1,processing:"queued"};
  assert.equal((await f.dispatch({kind:"capture-status",requestId:payload.requestId})).ok,false);
  assert.equal(f.values["flaneur-outbox-v2:"+payload.requestId].payload.html,payload.html);
+});
+
+test('web content needs an explicit toolbar grant and cannot forge another source or a LinkedIn capture',async()=>{
+ const f=await fixture(),sender={...content,url:'https://project.example.test/',tab:{id:42}};
+ const payload={...body(),type:'article',sourceUrl:sender.url,html:'<article data-flaneur-source="web">Project</article>'};
+ assert.equal(await f.dispatch({kind:'capture',payload},sender),null);
+ chrome.action.onClicked.listeners[0]({id:42,url:sender.url});
+ assert.equal((await f.dispatch({kind:'capture',payload},sender)).state,'queued');
+ assert.equal(await f.dispatch({kind:'capture',payload:{...payload,sourceUrl:'https://other.example.test/'}},sender),null);
+ assert.equal(await f.dispatch({kind:'capture',payload:{...payload,type:'profile'}},sender),null);
+ assert.equal(await f.dispatch({kind:'capture',payload},{...sender,frameId:1}),null);
 });

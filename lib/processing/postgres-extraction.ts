@@ -1,3 +1,4 @@
+import { captureKind } from "./parse-input";
 import type postgres from "postgres";
 import type { ExtractionSnapshot, ExtractionResult } from "./extraction";
 import { extractionProcessor } from "./extraction";
@@ -22,7 +23,7 @@ export async function readExtractionTransaction(sql:postgres.TransactionSql,snap
           and not exists (select 1 from public.object_alias a where a.former_object_id = o.subject_id)`;
       const subject = proof.length === 1 ? { personId: proof[0]!.subject_id, identityObservationId: proof[0]!.id } : null;
       const snapshot: ExtractionSnapshot = { id: row.id, contentGzip: row.content_gzip, contentHash: row.content_hash,
-        sourceUrl: row.source_url, adapterId: row.adapter_id, kind: row.capture_type === "profile" ? "profile_page" : "social_post", subject };
+        sourceUrl: row.source_url, adapterId: row.adapter_id, kind: captureKind(row.adapter_id, row.capture_type), subject };
       return snapshot;
 }
 

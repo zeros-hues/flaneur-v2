@@ -1,11 +1,12 @@
 import { conceptAssociationOrigin, conceptAssociationProofs } from "../relationships/concept-association";
 import { migrationId } from "../migration/identity";
+import { patternOwnerNotes } from './pattern-owner-notes';
 import type postgres from "postgres";
 import { readCandidates, type ReaderData, type ObservationRow, type LocatorRow } from "./reader";
 import type { RetrievalReader } from "./pipeline";
 import type { Request } from "./evidence";
 import type { CapturedSourceRow } from "./captured-source";
-import { TEXT_NORMALIZER_VERSION } from "../processing/parse-input";
+import { TEXT_NORMALIZER_VERSION, WEB_NORMALIZER_VERSION } from "../processing/parse-input";
 import {addRelationshipFilters} from './postgres-relationships';
 import {relationshipKinds} from './relationship-filters';
 import { generateSemanticCandidates } from "./postgres-semantic";
@@ -22,11 +23,18 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
           and not exists (select 1 from public.object_alias a where a.former_object_id = r.id) order by id`;
       if (objects.length > 5000) throw new Error("READER_POPULATION_LIMIT");
       const observations = await sql<ObservationRow[]>`select o.id, o.subject_id as "subjectId", o.truth_layer as layer,
-        o.body_text as text, o.support_status as "supportStatus",
+        o.body_text as text, o.support_status as "supportStatus",o.semantic_role as "semanticRole",
         (r.archived_at is not null or s.archived_at is not null
           or exists (select 1 from public.object_alias a where a.former_object_id in (o.id, o.subject_id))
           or exists (select 1 from public.observation_review v where v.observation_id = o.id)
           or exists (select 1 from public.observation n where n.supersedes_id = o.id)
+          or (o.field_key='capture_concept' and o.origin_key like 'capture-semantic-v1:%' and not exists(
+            select 1 from public.processing_head head join public.processing_job job
+              on job.scope_key=head.scope_key and job.input_fingerprint=head.input_fingerprint and job.state='succeeded'
+            join public.processing_head parsed on parsed.scope_key='parse:snapshot:'||(o.structured_value->>'snapshotId')
+            where head.scope_key='enrich:object:'||o.subject_id::text
+              and head.input_fingerprint=o.structured_value->>'inputFingerprint'
+              and parsed.input_fingerprint=o.structured_value->>'parseFingerprint'))
           or (o.field_key='reviewed_trajectory' and o.origin_key like 'explicit-trajectory-v1:%' and exists(
        select 1 from jsonb_array_elements(jsonb_build_array(o.structured_value#>'{request,from}',o.structured_value#>'{request,to}')) endpoint
        where not exists(select 1 from public.concept c join public.object_ref cr on cr.id=c.id and cr.archived_at is null
@@ -108,7 +116,7 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
         r.normalizer_version as "normalizerVersion", r.text, r.text_hash as "textHash",
         s.artifact_id as "artifactId", e.id as "encounterId", s.source_url as "sourceUrl",
         s.content_hash as "contentHash", s.adapter_id as "adapterId",
-        case when s.capture_type = 'profile' then 'profile_page' else 'social_post' end as kind,
+        case when s.adapter_id='web' then 'article' when s.capture_type = 'profile' then 'profile_page' else 'social_post' end as kind,
         j.input_fingerprint as fingerprint
         from public.snapshot_representation r join public.snapshot s on s.id=r.snapshot_id
         join public.capture_request request on request.snapshot_id=s.id
@@ -119,8 +127,8 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
         join public.processing_head h on h.scope_key='parse:snapshot:' || s.id::text
         join public.processing_job j on j.scope_key=h.scope_key and j.input_fingerprint=h.input_fingerprint
           and j.snapshot_id=s.id and j.kind='parse' and j.state='succeeded'
-        where r.normalizer_version=${TEXT_NORMALIZER_VERSION} || ':' ||
-          case when s.capture_type='profile' then 'profile_page' else 'social_post' end
+        where r.normalizer_version=case when s.adapter_id='web' then ${WEB_NORMALIZER_VERSION} || ':article'
+          else ${TEXT_NORMALIZER_VERSION} || ':' || case when s.capture_type='profile' then 'profile_page' else 'social_post' end end
           and exists(select 1 from public.encounter_object x where x.encounter_id=e.id and x.object_id=a.id and x.relation='source')
           and not exists(select 1 from public.object_alias alias where alias.former_object_id in (a.id,e.id))
         order by r.id limit 50001`;
@@ -249,7 +257,9 @@ export async function readRetrievalTransaction(sql:postgres.TransactionSql,reque
         for (const p of peopleRows) {
           const roles = rolesByPerson.get(p.id) ?? [];
           const education = eduByPerson.get(p.id) ?? [];
-          const notes = notesByPerson.get(p.id) ?? [];
+          const candidate = output.candidates.find(candidate => candidate.id === p.id);
+          const notes = [...(notesByPerson.get(p.id) ?? []), ...(candidate ? patternOwnerNotes(candidate,
+            { objects, observations, locators, facts, encounters, links, derivationHeads, dependencies }) : [])];
           const reviewedConcepts = conceptsByPerson.get(p.id) ?? [];
 
           const patternPerson: import("./pattern-types").PatternInputPerson = {

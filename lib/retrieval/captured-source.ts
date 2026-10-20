@@ -1,14 +1,14 @@
 import type { Evidence } from "./evidence";
 import { representation, sameRepresentation, type Representation } from "./representation";
-import { parseFingerprint, TEXT_NORMALIZER_VERSION } from "../processing/parse-input";
+import { parseFingerprint, normalizerVersion } from "../processing/parse-input";
 
 /** SQL has checked active canonical source/Encounter links and a succeeded current-head job. */
 export interface CapturedSourceRow extends Representation {
   artifactId: string; encounterId: string; sourceUrl: string; contentHash: string;
-  adapterId: string; kind: "profile_page" | "social_post"; fingerprint: string;
+  adapterId: string; kind: "profile_page" | "social_post" | "article"; fingerprint: string;
 }
 export function capturedSourceEvidence(row: CapturedSourceRow, identityObservationId: string | null): Evidence[] {
-  if (row.adapterId !== "linkedin" || row.normalizerVersion !== `${TEXT_NORMALIZER_VERSION}:${row.kind}` ||
+  if (!((row.adapterId === "linkedin" && row.kind !== "article") || (row.adapterId === "web" && row.kind === "article")) || row.normalizerVersion !== `${normalizerVersion(row.kind)}:${row.kind}` ||
       !row.text.trim() || parseFingerprint({ ...row, identityObservationId }) !== row.fingerprint ||
       !sameRepresentation(row, representation(row.snapshotId, row.normalizerVersion, row.text))) return [];
   let sourceUrl: string | undefined;

@@ -1,5 +1,39 @@
 # Phase 3: retrieval and evidence contracts, partly prepared
 
+Current update, 2026-10-20: D.1 collection paused at five saves under the
+owner's IMPORTANT recurring-defect stop rule. Missing-URN /posts/ identity
+fallback is CONFIRMED RECURRING on P2 and L2-1. New post Concepts are
+grounded despite noisy player input; seven live queries and partial Q7
+owner ratings are logged. No application code, database repair or ranking
+changes. See the [diagnosis, frequency and fix priorities](../phase4/REAL_USE_CALIBRATION.md).
+
+Current update, 2026-10-20: Milestone D is owner-approved READY. D.1
+real-use calibration has started with a separate read-only baseline;
+four new saves completed twelve jobs once each. Five live query checks
+and source/Concept inspection are logged. Three quality hypotheses await
+independent replication in the next 6-10 owner-selected saves; none is
+classified as confirmed recurring. No application changes or ranking
+tuning during this collection step; explicit owner usefulness ratings pending.
+No D.1 identity decision or application correction has been made.
+See [scope, sample/identity/query ledgers and issue log](../phase4/REAL_USE_CALIBRATION.md).
+The existing controlled local runtime remains healthy. No historical
+backfill, deployment, provider/weight change or broad redesign is underway.
+
+Current update, 2026-10-20: Milestone D is READY for the controlled local
+new-save workflow. All three real sources, deliberate distinct-reason
+duplicate, durable queued-work restart, exact Recall and relevant live
+Resurface checks passed. The approved 3D question returned the new post
+at rank 5. Ten Save requests produced three Artifacts, ten independent
+capture histories and thirty jobs that succeeded once; no new Person,
+reviewed relationship or unsupported Person Reflect support was created.
+No historical public baseline row changed. All 436 tests and application/
+extension TypeScript pass. HTTPS and the bounded worker remain running
+with the same two hosts; saved .env capture activation remains off.
+[Final evidence, IDs, write audit and limits](MILESTONE_D_ACCEPTANCE.md).
+No deployment/backfill or completion of all Phase 3 work is implied.
+
+Current update, 2026-10-19: Milestone D controlled Capture V2 implementation is PARTIALLY READY. New-source web capture, scoped durable semantic processing, V2 owner-note participation and private local activation tooling are implemented. Real profile/post/project capture and live post-capture retrieval remain pending; activation in .env stays off. No permanent database writes, schema changes, backfill or deployment occurred. See [implementation, validation, exact local setup and acceptance gaps](LIVE_WITH_IT.md).
+
 Current update, 2026-10-19: directed Person trajectory review/retrieval is complete for the approved narrow slice. Explicit User transitions, unconfirmed Inferred chronology candidates, preserved dates/uncertainty, correction/withdrawal/archive and evidence/history are separate from mere co-occurrence. Person education/employment/Concept combinations work; unsupported cross-object traversal and undated relative career ordering clarify. All 394 tests, clean TypeScript/build, 246 rollback-only SQL, 161 browser and 106 HTTP checks pass. No migration/permanent database change, provider, capture activation, backfill or deployment occurred. Phase 3 remains incomplete. EPFL and 3D are PARTIALLY READY; Pattern is NOT READY. See [implementation and exact remaining gaps](TRAJECTORY.md). Work stops at this slice; earlier updates below retain their historical status.
 
 Current update, 2026-10-18: direct owner-reviewed education/employment and scoped study-field retrieval are implemented locally. The Person review/history panel, exact Organisation resolution, current-support checks and Person Concept combinations pass 380 tests, clean TypeScript/build, 170 rollback-only SQL, 134 browser and 96 HTTP checks. Legacy projections are not adopted; author/profile Artifact scope and Concept policies remain intact. No migration, permanent database change, provider, capture activation, backfill or deployment occurred. See [completed slice and remaining limits](EDUCATION_EMPLOYMENT.md). Phase 3 remains incomplete; [trajectory is design only](TRAJECTORY_PROPOSAL.md) and awaits approval before implementation.

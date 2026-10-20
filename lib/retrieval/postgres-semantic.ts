@@ -138,8 +138,20 @@ export async function generateSemanticCandidates(
     }[]>`
       select l.artifact_id as "artifactId", l.concept_id as "conceptId"
       from public.concept_link l
+      join public.artifact artifact on artifact.id=l.artifact_id
       join public.object_ref r on r.id = l.artifact_id and r.kind = 'artifact' and r.archived_at is null
       where l.concept_id = any(${conceptIds})
+        and (artifact.migration_key not like 'capture-source-v1:%' or artifact.migration_key is null or exists(
+          select 1 from public.observation o join public.processing_head h
+            on h.scope_key='enrich:object:'||artifact.id::text and h.input_fingerprint=o.structured_value->>'inputFingerprint'
+          join public.processing_job job on job.scope_key=h.scope_key and job.input_fingerprint=h.input_fingerprint and job.state='succeeded'
+          join public.processing_head parsed on parsed.scope_key='parse:snapshot:'||(o.structured_value->>'snapshotId')
+            and parsed.input_fingerprint=o.structured_value->>'parseFingerprint'
+          join public.object_ref proof on proof.id=o.id and proof.archived_at is null
+          where o.subject_id=artifact.id and o.field_key='capture_concept' and o.truth_layer='inferred'
+            and o.structured_value->>'conceptId'=l.concept_id::text
+            and not exists(select 1 from public.observation_review review where review.observation_id=o.id)
+            and not exists(select 1 from public.observation newer where newer.supersedes_id=o.id)))
       limit 100
     `;
 

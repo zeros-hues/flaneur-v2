@@ -7,6 +7,7 @@ import { inspectionOffset } from "@/lib/inspection/source";
 import type { InspectionParams } from "@/lib/inspection/page";
 import { SourceIdentityReview } from "@/components/inspection/SourceIdentityReview";
 import { SourceAuthorshipReview } from "@/components/inspection/SourceAuthorshipReview";
+import { CaptureProgress } from '@/components/inspection/CaptureProgress';
 import "@/components/sheet/sheet.css";
 import "@/components/inspection/inspection.css";
 export const dynamic="force-dynamic";
@@ -20,7 +21,8 @@ export default async function SnapshotPage({params,searchParams}:InspectionParam
  if(!snapshot)notFound();
  return <main className="sheet"><article className="sheet__main memory-detail">
   <h1>Captured source</h1><p>Stored capture time: {snapshot.capturedAt}</p>
-  <p className="quiet small">{snapshot.captureType} capture · {snapshot.sectionsCovered.length?`Recorded sections: ${snapshot.sectionsCovered.join(", ")}`:"Section coverage was not recorded."} This does not establish complete page coverage or an independently verified historical clock.</p>
+  <CaptureProgress snapshotId={id}/>
+  <p className="quiet small">{snapshot.adapterId==='web'?'Web page':snapshot.captureType} capture · {snapshot.sectionsCovered.length?`Recorded sections: ${snapshot.sectionsCovered.join(", ")}`:"Section coverage was not recorded."} This does not establish complete page coverage or an independently verified historical clock.</p>
   {snapshot.artifactId&&<p><Link href={`/artifact/${snapshot.artifactId}`}>recorded Artifact</Link></p>}
   {snapshot.encounterId&&<p><Link href={`/encounter/${snapshot.encounterId}`}>recorded Encounter</Link></p>}
   {snapshot.sourceUrl&&<p><a href={snapshot.sourceUrl} target="_blank" rel="noopener noreferrer">open original source</a></p>}
@@ -31,8 +33,8 @@ export default async function SnapshotPage({params,searchParams}:InspectionParam
   <p className="quiet small">Source markup is displayed as text and is never executed. Normalized representations are separate immutable inputs used by evidence locators.</p>
   {snapshot.state==="text"?<pre>{snapshot.text}</pre>:<p>The captured markup could not be decoded within the viewer&apos;s limits. The original stored bytes remain available where the download limit allows.</p>}
   {snapshot.nextOffset!==null&&<Link href={`?${new URLSearchParams({offset:String(snapshot.nextOffset),...(snapshot.representation?{representation:snapshot.representation}:{})})}`}>next source section</Link>}
-  <SourceIdentityReview snapshotId={snapshot.id}/>
-  {snapshot.captureType==='post'&&<SourceAuthorshipReview snapshotId={snapshot.id}/>}
+  {snapshot.adapterId!=='web'&&<SourceIdentityReview snapshotId={snapshot.id}/>}
+  {snapshot.adapterId!=='web'&&snapshot.captureType==='post'&&<SourceAuthorshipReview snapshotId={snapshot.id}/>}
   <h2>Representations</h2><ul><li><Link href={`/snapshot/${id}`}>captured markup</Link></li>{snapshot.representations.map(item=><li key={item.id}>
    <Link href={`?representation=${item.id}`}>{item.version}</Link></li>)}</ul>
  </article></main>;

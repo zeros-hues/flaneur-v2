@@ -1,3 +1,4 @@
+export { validateControlledCapture } from './validate-controlled-capture';
 import {validateTrajectory} from './validate-trajectory';
 import {validateCareer} from './validate-career';
 import assert from "node:assert/strict";

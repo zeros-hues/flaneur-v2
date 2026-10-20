@@ -5,7 +5,8 @@ export const captureIdentity=()=>({requestId:crypto.randomUUID(),clientCapturedA
 export function captureFeedback(result:Extract<CaptureResult,{ok:true}>):string {
  if(result.state==="saved"){
   if(result.processing==="quarantined"||result.processing==="failed")return "Saved to Flaneur. Processing needs attention.";
-  if(result.processing==="succeeded")return "Saved to Flaneur. Processing finished.";
+  // The durable receipt describes parsing, not completion of later semantic jobs.
+  if(result.processing==="succeeded")return "Saved to Flaneur.";
   if(result.processing==="queued")return "Saved to Flaneur. Processing is queued.";
   if(result.processing==="leased")return "Saved to Flaneur. Processing is running.";
   return "Saved to Flaneur.";

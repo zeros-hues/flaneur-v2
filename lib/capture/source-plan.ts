@@ -5,14 +5,16 @@ export const SOURCE_RESOLUTION_VERSION="capture-source-v1";
 const hash=(value:string)=>createHash("sha256").update(value).digest("hex");
 const postUrn=(value:string|null)=>value&&/^urn:li:(activity|ugcPost|share):\d+$/.test(value)?value:null;
 export interface CaptureSourcePlan {
- type:"profile_page"|"social_post";sourceUrl:string;identityKind:string;externalKey:string;migrationKey:string;
- basis:"exact_profile_url"|"post_urn"|"snapshot_only";reason:string|null;
+ adapterId:"linkedin"|"web";type:"profile_page"|"social_post"|"article";sourceUrl:string;identityKind:string;externalKey:string;migrationKey:string;
+ basis:"exact_web_url"|"exact_profile_url"|"post_urn"|"snapshot_only";reason:string|null;
 }
 /** This identifies a recorded source document, never its owner/author or a Person. */
 export function captureSourcePlan(body:CaptureV2,snapshotId:string):CaptureSourcePlan {
  const url=new URL(body.sourceUrl);
  let sourceUrl=body.sourceUrl,identityKind="artifact_snapshot_v1",externalKey=snapshotId,basis:CaptureSourcePlan["basis"]="snapshot_only",reason:string|null="stable_source_unavailable";
- if(body.kind==="profile_page"&&/^\/in\/[^/]+(?:\/|$)/.test(url.pathname)){
+ if(body.adapterId==="web"&&body.kind==="article"){
+  identityKind="artifact_web_url_sha256_v1";externalKey=hash(body.sourceUrl);basis="exact_web_url";reason=null;
+ }else if(body.kind==="profile_page"&&/^\/in\/[^/]+(?:\/|$)/.test(url.pathname)){
   // Hash keeps long exact URLs within PostgreSQL's index-key bound; canonical_url retains the full value.
   identityKind="artifact_profile_url_sha256_v1";externalKey=hash(body.sourceUrl);basis="exact_profile_url";reason=null;
  }else if(body.kind==="social_post"){
@@ -24,6 +26,6 @@ export function captureSourcePlan(body:CaptureV2,snapshotId:string):CaptureSourc
    identityKind="artifact_post_urn_sha256_v1";externalKey=hash(urn);basis="post_urn";reason=null;
   }
  }
- return {type:body.kind,sourceUrl,identityKind,externalKey,basis,reason,
+ return {adapterId:body.adapterId,type:body.kind,sourceUrl,identityKind,externalKey,basis,reason,
   migrationKey:`${SOURCE_RESOLUTION_VERSION}:${hash(JSON.stringify([body.adapterId,identityKind,externalKey]))}`};
 }

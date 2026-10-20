@@ -1,3 +1,5 @@
+import {StringDecoder} from 'node:string_decoder';
+import {EventEmitter} from 'node:events';
 import assert from "node:assert/strict";
 import { createServer } from "node:https";
 import { spawn,execFileSync } from "node:child_process";
@@ -16,7 +18,7 @@ const syntheticSecret="installed-extension-synthetic-only";
 function on(method,fn){const list=listeners.get(method)??[];list.push(fn);listeners.set(method,list);}
 function call(method,params={},sessionId){return new Promise((resolve,reject)=>{
  const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(new Error("CDP_TIMEOUT"));},15000);
- pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject:()=>{clearTimeout(timer);reject(new Error("CDP_FAILED"));}});
+ pending.set(id,{method,resolve:value=>{clearTimeout(timer);resolve(value);},reject:()=>{clearTimeout(timer);reject(new Error("CDP_FAILED"));}});
  ws.send(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})}));
 });}
 async function evaluate(expression,sessionId=optionsSession,contextId){
@@ -37,17 +39,18 @@ async function saveProfile(){
 }
 async function closeOverlay(){await until(()=>evaluate(`${root}.querySelector('form')===null`,pageSession));}
 async function launch(){
- const executable="C:/Program Files/Google/Chrome/Application/chrome.exe";assert.ok(existsSync(executable));
+ const executable=process.env.FLANEUR_BROWSER_EXECUTABLE || "C:/Program Files/Google/Chrome/Application/chrome.exe";assert.ok(existsSync(executable));
  const spki=createHash("sha256").update(new X509Certificate(readFileSync(join(work,"cert.pem"))).publicKey.export({type:"spki",format:"der"})).digest("base64");
- rmSync(join(profile,"DevToolsActivePort"),{force:true});
- browser=spawn(executable,["--headless=new","--disable-gpu","--no-first-run","--no-default-browser-check","--disable-background-networking","--enable-unsafe-extension-debugging","--remote-debugging-port=0",`--ignore-certificate-errors-spki-list=${spki}`,`--user-data-dir=${profile}`,"about:blank"],{windowsHide:true,stdio:"ignore"});browser.on("error",()=>{});
- const portFile=join(profile,"DevToolsActivePort");for(let i=0;i<150&&!existsSync(portFile);i++)await sleep(100);assert.ok(existsSync(portFile));
- const [port,path]=readFileSync(portFile,"utf8").trim().split(/\r?\n/);
- ws=new WebSocket(`ws://127.0.0.1:${port}${path}`);await new Promise((resolve,reject)=>{ws.once("open",resolve);ws.once("error",reject);});
- ws.on("message",raw=>{const data=JSON.parse(String(raw));if(data.id){const promise=pending.get(data.id);if(!promise)return;pending.delete(data.id);return data.error?promise.reject():promise.resolve(data.result);}
+ browser=spawn(executable,["--headless=new","--disable-gpu","--no-first-run","--no-default-browser-check","--disable-background-networking","--enable-unsafe-extension-debugging","--remote-debugging-pipe",`--ignore-certificate-errors-spki-list=${spki}`,`--user-data-dir=${profile}`,"about:blank"],{windowsHide:true,stdio:['ignore','ignore','ignore','pipe','pipe']});browser.on("error",()=>{});
+ ws=new EventEmitter();ws.readyState=WebSocket.OPEN;
+ ws.send=message=>browser.stdio[3].write(message+'\0');
+ ws.close=()=>{ws.readyState=WebSocket.CLOSED;browser.stdio[3].end();};
+ browser.stdio[3].on('error',()=>{});browser.stdio[4].on('error',()=>{});
+ const decoder=new StringDecoder('utf8');let input='';browser.stdio[4].on('data',chunk=>{input+=decoder.write(chunk);let boundary;while((boundary=input.indexOf('\0'))>=0){const message=input.slice(0,boundary);input=input.slice(boundary+1);if(message)ws.emit('message',message);}});
+ ws.on("message",raw=>{const data=JSON.parse(String(raw));if(data.id){const promise=pending.get(data.id);if(!promise)return;pending.delete(data.id);if(data.error&&process.env.FLANEUR_BROWSER_DIAGNOSTICS==='true')console.error(JSON.stringify({method:promise.method,cdpCode:data.error.code,reason:String(data.error.message).slice(0,180)}));return data.error?promise.reject():promise.resolve(data.result);}
   for(const listener of listeners.get(data.method)??[])listener(data.params,data.sessionId);
  });
- return port;
+ await call('Browser.getVersion');
 }
 async function stopBrowser(){if(ws?.readyState===WebSocket.OPEN)try{await call("Browser.close");}catch{}ws?.close();
  if(browser&&browser.exitCode===null)await Promise.race([new Promise(resolve=>browser.once("exit",resolve)),sleep(5000)]);
@@ -85,11 +88,12 @@ try {
  await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));const origin=`https://127.0.0.1:${server.address().port}`;
  const manifest=JSON.parse(readFileSync("extension/manifest.json","utf8"));manifest.host_permissions=[origin+"/*"];
  writeFileSync(join(extension,"manifest.json"),JSON.stringify(manifest));copyFileSync("extension/options.html",join(extension,"options.html"));
- await build({entryPoints:{background:"extension/background.ts",options:"extension/options.ts",content:"extension/content/index.ts"},outdir:extension,bundle:true,platform:"browser",format:"iife",target:"chrome120",loader:{".woff2":"binary"},define:{__APP_URL__:JSON.stringify(origin)},logLevel:"silent"});
+ await build({entryPoints:{background:"extension/background.ts",options:"extension/options.ts",content:"extension/content/index.ts",web:"extension/content/web.ts"},outdir:extension,bundle:true,platform:"browser",format:"iife",target:"chrome120",loader:{".woff2":"binary"},define:{__APP_URL__:JSON.stringify(origin)},logLevel:"silent"});
  stage="launch";await launch();
  stage="load_unpacked";({id:extensionId}=await call("Extensions.loadUnpacked",{path:extension}));assert.ok(extensionId);checks++;
  const {targetId:optionsTarget}=await call("Target.createTarget",{url:`chrome-extension://${extensionId}/options.html`});optionsSession=await attach(optionsTarget);
  await until(()=>evaluate("document.querySelector('#secret')!==null"));
+ await until(()=>evaluate("document.querySelector('#status').textContent.length>0"));
  stage="configure_synthetic_access";await evaluate(`document.querySelector('#secret').value=${JSON.stringify(syntheticSecret)};document.querySelector('form').requestSubmit()`);
  await until(()=>evaluate("document.querySelector('#status').textContent.includes('Access saved')"));checks++;
  const {targetId:pageTarget}=await call("Target.createTarget",{url:"about:blank"});pageSession=await attach(pageTarget);
@@ -97,12 +101,14 @@ try {
  on("ServiceWorker.workerVersionUpdated",params=>{for(const version of params.versions)versions.set(version.versionId,version);});
  on("Fetch.requestPaused",(params,session)=>{
   if(session!==pageSession)return;
-  const body='<!doctype html><main id="workspace"><section aria-label="Primary content"><h2>Installed synthetic profile</h2><p>'+"x".repeat(9000)+'😀</p></section></main>';
-  void (params.request.url==="https://www.linkedin.com/in/flaneur-installed-fixture/"?
+  const webSource=params.request.url==='https://controlled.example.test/project';
+  const body=webSource?'<html><head><title>Controlled rendering</title></head><body><article><h1>Adaptive rendering</h1><p>Mobile 3D rendering project.</p><form><input value="do-not-save-form-secret"></form></article></body></html>':'<!doctype html><main id="workspace"><section aria-label="Primary content"><h2>Installed synthetic profile</h2><p>'+"x".repeat(9000)+'😀</p></section></main>';
+  void ((webSource||params.request.url==="https://www.linkedin.com/in/flaneur-installed-fixture/")?
    call("Fetch.fulfillRequest",{requestId:params.requestId,responseCode:200,responseHeaders:[{name:"content-type",value:"text/html"}],body:Buffer.from(body).toString("base64")},session):
    call("Fetch.failRequest",{requestId:params.requestId,errorReason:"BlockedByClient"},session)).catch(()=>{});
  });
  await call("Page.enable",{},pageSession);await call("ServiceWorker.enable",{},pageSession);await call("Fetch.enable",{patterns:[{urlPattern:"*"}]},pageSession);
+ if(!process.argv.includes('--web-only')){
  stage="real_content_script";await call("Page.navigate",{url:"https://www.linkedin.com/in/flaneur-installed-fixture/"},pageSession);
  await until(()=>evaluate("document.querySelector('flaneur-ui')!==null",pageSession));checks++;
  stage="offline_queue";assert.match(await saveProfile(),/Queued on this device/);checks++;
@@ -181,6 +187,25 @@ try {
  await until(async()=>accepted.has(fullId));await until(async()=>await state(fullId)==="saved");checks++;
  await until(()=>evaluate(`chrome.storage.local.get(${JSON.stringify(fullEntry[0])}).then(records=>records[${JSON.stringify(fullEntry[0])}]===undefined)`));
  assert.equal((await storage())[fullEntry[0]],undefined);checks++;
+ }
+ stage="web_toolbar_capture";mode="online";await evaluate("chrome.storage.local.remove('fixtureQuotaFill')");
+ const webTarget=await call('Target.createTarget',{url:'about:blank'});pageSession=await attach(webTarget.targetId);
+ await call('Page.enable',{},pageSession);await call('Fetch.enable',{patterns:[{urlPattern:'*'}]},pageSession);
+ await call('Page.navigate',{url:'https://controlled.example.test/project'},pageSession);
+ await until(()=>evaluate("document.querySelector('article')!==null",pageSession));
+ assert.equal(await evaluate("document.querySelector('flaneur-ui')===null",pageSession),true);checks++;
+ await call('Page.bringToFront',{},pageSession);
+ const tabTargets=await call('Target.getTargets',{filter:[{}]});
+ const webTab=tabTargets.targetInfos.find(target=>target.type==='tab'&&target.url==='https://controlled.example.test/project');
+ await call('Extensions.triggerAction',{id:extensionId,targetId:webTab?.targetId??webTarget.targetId});
+ await until(()=>evaluate("document.querySelector('flaneur-ui')?.shadowRoot?.querySelector('form')!==null&&!!document.querySelector('flaneur-ui')",pageSession));
+ await evaluate(`${root}.querySelector('textarea').value='Useful mobile rendering project';${root}.querySelector('form').requestSubmit()`,pageSession);
+ await until(()=>requests.some(body=>body.adapterId==='web'));
+ const capturedWeb=requests.find(body=>body.adapterId==='web');
+ assert.equal(capturedWeb.kind,'article');assert.equal(capturedWeb.sourceUrl,'https://controlled.example.test/project');checks+=2;
+ assert.equal(capturedWeb.reasonForNoticing,'Useful mobile rendering project');checks++;
+ assert.ok(capturedWeb.html.includes('Adaptive rendering'));assert.equal(capturedWeb.html.includes('do-not-save-form-secret'),false);checks+=2;
+ await until(async()=>accepted.has(capturedWeb.requestId));await until(async()=>await state(capturedWeb.requestId)==='saved');checks++;
  console.log(JSON.stringify({status:"installed_extension_validation_passed",checks,installed_extension:true,real_chrome_storage:true,forced_worker_stop:true,browser_restart:true,restart_fixture_reload_required:restartReloadRequired,real_alarm_wake:true,synthetic_https:true,real_database_used:false}));
 }catch(error){console.error(JSON.stringify({status:"installed_extension_validation_failed",stage,completed_checks:checks,
  code:/^[A-Z_]{1,64}$/.test(error?.message??"")?error.message:error?.code==="ERR_ASSERTION"?"ASSERTION_FAILED":"FIXTURE_FAILED"}));process.exitCode=1;}

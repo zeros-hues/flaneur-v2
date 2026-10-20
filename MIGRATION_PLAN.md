@@ -1,5 +1,51 @@
 # Flaneur migration plan
 
+Current update, 2026-10-20: D.1 collection paused at the owner's early stop
+condition after five real saves. P2 and L2-1 reproduce the same IMPORTANT
+missing-URN /posts/ identity mechanism (2/2 inspected examples); source
+keys fall back to unique Snapshot IDs. Pure read-only resolver comparison
+confirms a new Save would not reuse the identity key, without creating a
+duplicate row. A narrow identity correction is justified before more
+calibration, pending validation of safe URL/DOM semantics. No code patch,
+database write, backfill or ranking tuning performed. Playback-derived
+Concept harm remains LIKELY (1/4 videos); neighboring-project contamination
+ISOLATED (1 web project). Partial Q7 owner judgments are logged, including
+USEFUL for the new post and IRRELEVANT for the second-ranked profile.
+See the [fifth-save stop report](docs/phase4/REAL_USE_CALIBRATION.md).
+
+Current update, 2026-10-20: Milestone D is approved READY and D.1 real-use
+calibration is now in progress. The separate read-only checkpoint excludes
+the ten D acceptance saves from the new 10-20-save sample. The runtime is
+healthy; no application/schema/provider/weight change or new identity
+decision has been made. First owner-selected sources and current context
+were initially pending; the owner has now selected three LinkedIn posts
+and one Contra project for an intuitive-interaction context. Only the
+selected Contra hostname was added to the local allowlist. All four new
+saves completed twelve jobs on their first attempts. Five live retrieval
+checks yielded hypotheses about playback-UI Concept pollution,
+related-project bleed and source-identity/Recall limitations; none is
+classified as a confirmed recurring defect. The next 6-10 owner-selected
+saves will test recurrence and collect explicit usefulness judgments.
+Eight next sources are selected (six LinkedIn, two &Walsh projects);
+redirects/hosts are checked and local andwalsh.com access is prepared.
+They are not counted as captures yet. Prior query feedback was aggregate
+SOMEWHAT USEFUL; individual result ratings remain unspecified.
+Application changes and ranking tuning remain on hold; no correction or
+usefulness approval is claimed. Follow the [calibration log and correction gate](docs/phase4/REAL_USE_CALIBRATION.md).
+Do not start historical backfill, deployment or broad redesign.
+
+Current update, 2026-10-20: Milestone D is READY for the controlled local
+new-save workflow. The real profile, distinct-note duplicate, post and web
+cases passed; queued post work survived a runtime restart. Ten actual
+Save requests resolve to three Artifacts, with thirty successful jobs,
+no new People/reviewed relationships and no changed historical public
+rows. The post ranked fifth for the approved live 3D question. All 436
+tests and both TypeScript checks pass. Hosted activation, deployment and
+historical backfill remain out of scope; Phase 3 as a whole is not marked
+complete. See [final acceptance and operational limits](docs/phase3/MILESTONE_D_ACCEPTANCE.md).
+
+Current update, 2026-10-19: Milestone D controlled Capture V2 implementation is PARTIALLY READY. New-source web capture, scoped durable semantic processing, V2 owner-note participation and private local activation tooling are implemented. Real profile/post/project capture and live post-capture retrieval remain pending; activation in .env stays off. No permanent database writes, schema changes, backfill or deployment occurred. See [implementation, validation, exact local setup and acceptance gaps](docs/phase3/LIVE_WITH_IT.md).
+
 Current update, 2026-10-19: Milestone C pattern-support qualification is READY for the scoped correction. Readable role witnesses now qualify domain candidates before independent-Person counting; irrelevant notes cannot corroborate roles. Reflect applies constraint/date qualification and current reviewed Concept proof checks. No schema or stored data changed. See [the exact live results, support, validation and deferred attribution debt](docs/phase3/PATTERN_SUPPORT_QUALIFICATION.md). This does not mark Phase 3 complete.
 
 Current update, 2026-10-19: the approved trajectory slice is complete locally. Immutable Person Observations now distinguish directed owner-reviewed transitions from unconfirmed chronology candidates and A+B co-occurrence. Confirmation, correction, withdrawal/archive, exact Concept resolution, precision-preserving chronology, Person career/Concept composition and Street evidence/history are implemented. All 394 tests, clean TypeScript, production build/package, 246 rollback-only SQL, 161 browser and 106 HTTP checks pass. No migration/permanent database change, provider, capture activation, backfill or deployment occurred. Phase 3 remains incomplete; no subsequent task was started. See [trajectory implementation, limits and EPFL/3D/Pattern readiness](docs/phase3/TRAJECTORY.md). Earlier updates below retain their historical status.

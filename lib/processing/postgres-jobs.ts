@@ -7,9 +7,11 @@ type SqlTransaction = postgres.TransactionSql;
 // Provider/extraction work stays outside transactions; output application is injected and fenced.
 export function postgresJobs<Result>(connection: ReturnType<typeof postgres>,
   apply: (sql: SqlTransaction, lease: Lease, result: Result) => Promise<void>,
-  kinds: Lease["kind"][] = ["parse", "enrich", "index"]): JobStore<Result> {
+  kinds: Lease["kind"][] = ["parse", "enrich", "index"], snapshotIds?: string[]): JobStore<Result> {
   if (!kinds.length || kinds.some((kind) => !["parse", "enrich", "index"].includes(kind)))
     throw new Error("INVALID_PROCESSING_KINDS");
+  if (snapshotIds && (!snapshotIds.length || snapshotIds.some(id => !/^[0-9a-f-]{36}$/i.test(id))))
+    throw new Error('INVALID_PROCESSING_SCOPE');
   return {
     async renew(lease, durationMs) {
       if (!Number.isFinite(durationMs) || durationMs <= 0) throw new Error("INVALID_LEASE_DURATION");
@@ -27,7 +29,8 @@ export function postgresJobs<Result>(connection: ReturnType<typeof postgres>,
         // Never leave exhausted jobs permanently leased after a worker disappears.
         // Lock jobs before their runs, matching reclaim/fail/invalidation. Skip other workers' rows.
         const exhausted = await sql`select id, lease_token from processing_job where state = 'leased'
-          and kind = any(${kinds}) and leased_until <= clock_timestamp() and attempts >= max_attempts
+          and kind = any(${kinds}) and (${snapshotIds === undefined} or snapshot_id = any(${snapshotIds ?? []}))
+          and leased_until <= clock_timestamp() and attempts >= max_attempts
           order by id for update skip locked`;
         if (exhausted.length) {
           const ids = exhausted.map((job) => job.id as string);
@@ -39,7 +42,8 @@ export function postgresJobs<Result>(connection: ReturnType<typeof postgres>,
         }
         const rows = await sql`select j.* from processing_job j join processing_head h on h.scope_key = j.scope_key
           and h.input_fingerprint = j.input_fingerprint
-          where j.kind = any(${kinds}) and j.attempts < j.max_attempts and ((j.state = 'queued' and j.available_at <= now())
+          where j.kind = any(${kinds}) and (${snapshotIds === undefined} or j.snapshot_id = any(${snapshotIds ?? []}))
+            and j.attempts < j.max_attempts and ((j.state = 'queued' and j.available_at <= now())
             or (j.state = 'leased' and j.leased_until <= clock_timestamp()))
           order by j.available_at, j.id limit 1 for update of j skip locked`;
         const row = rows[0]; if (!row) return null;
@@ -57,6 +61,8 @@ export function postgresJobs<Result>(connection: ReturnType<typeof postgres>,
     },
     async complete(lease, result, outcome, _now) {
       return connection.begin("isolation level read committed", async (sql) => {
+        // Review/capture writers acquire graph before scope locks. Keep completion in that order.
+        await sql`select pg_advisory_xact_lock(1790703955, 1)`;
         const scopes = await sql`select scope_key from processing_job where id = ${lease.jobId}`;
         if (!scopes.length) return false;
         await sql`select pg_advisory_xact_lock(hashtextextended(${`processing:${scopes[0]!.scope_key}`}, 0))`;

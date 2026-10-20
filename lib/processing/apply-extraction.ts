@@ -2,7 +2,7 @@ import type postgres from "postgres";
 import { canonical } from "../migration/batch";
 import { persistEvidence } from "../retrieval/persistence";
 import { evidenceStoreInTransaction } from "../retrieval/postgres-evidence";
-import { FIELD_EXTRACTOR_VERSION, TEXT_NORMALIZER_VERSION } from "./parse-input";
+import { FIELD_EXTRACTOR_VERSION, TEXT_NORMALIZER_VERSION, WEB_NORMALIZER_VERSION } from "./parse-input";
 import { verifiedExcerpt } from "../retrieval/evidence";
 import type { ExtractionResult } from "./extraction";
 import type { Lease } from "./worker";
@@ -18,13 +18,13 @@ export async function applyExtraction(sql: postgres.TransactionSql, lease: Lease
     if (result.representation || result.fields.length || result.code !== "NORMALIZATION_FAILED")
       throw new Error("INVALID_QUARANTINE_OUTPUT");
     await sql`insert into public.quarantine (snapshot_id, adapter_id, parser_version, reason, details)
-      values (${lease.snapshotId}, 'linkedin', ${FIELD_EXTRACTOR_VERSION}, 'NORMALIZATION_FAILED',
+      values (${lease.snapshotId}, ${result.adapterId ?? "linkedin"}, ${FIELD_EXTRACTOR_VERSION}, 'NORMALIZATION_FAILED',
         ${sql.json({ input_fingerprint: lease.inputFingerprint })})`;
     return;
   }
   const source = result.representation;
   if (!source || source.snapshotId !== lease.snapshotId || (result.fields.length && !result.subject) ||
-      ![`${TEXT_NORMALIZER_VERSION}:profile_page`, `${TEXT_NORMALIZER_VERSION}:social_post`].includes(source.normalizerVersion))
+      ![`${TEXT_NORMALIZER_VERSION}:profile_page`, `${TEXT_NORMALIZER_VERSION}:social_post`, `${WEB_NORMALIZER_VERSION}:article`].includes(source.normalizerVersion))
     throw new Error("INVALID_EXTRACTION_OUTPUT");
   if (result.subject) {
     // Same lock used by observation/review/alias graph triggers; check identity after acquiring it.

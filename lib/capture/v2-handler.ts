@@ -26,7 +26,7 @@ const response = (body: unknown, status: number) => Response.json(body, { status
 
 // The separate v2 route supplies its explicit activation gate. No parsing/provider work occurs here.
 export function captureV2Handler(store: CaptureStore, authorised: (secret: string | null) => boolean,
-  options: { enabled?: () => boolean } = {}) {
+  options: { enabled?: () => boolean; accepts?: (sourceUrl: string) => boolean } = {}) {
   return async (request: Request): Promise<Response> => {
     try { if (!authorised(request.headers.get("x-capture-secret"))) return response({ error: "unauthorised" }, 401); }
     catch { return response({ error: "capture_unavailable" }, 503); }
@@ -40,6 +40,8 @@ export function captureV2Handler(store: CaptureStore, authorised: (secret: strin
       error instanceof Error && error.message === "REQUEST_TOO_LARGE" ? 413 : 400); }
     const parsed = captureV2.safeParse(input);
     if (!parsed.success) return response({ error: "invalid_capture" }, 400);
+    if (options.accepts && !options.accepts(parsed.data.sourceUrl))
+      return response({ error: 'capture_source_not_enabled' }, 403);
     try {
       return response(await saveCaptureV2(store, parsed.data), 200);
     } catch (error) {

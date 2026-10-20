@@ -8,7 +8,7 @@ export const CAPTURED_ATTR = "data-flaneur-captured";
 export interface CapturePayload {
   requestId: string;
   clientCapturedAt: string;
-  type: "profile" | "post";
+  type: "profile" | "post" | "article";
   sourceUrl: string;
   html: string;
   note: string | null;

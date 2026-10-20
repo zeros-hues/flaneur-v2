@@ -2,7 +2,7 @@ import { POST_MENU_ID,type CapturePayload,type PostMenuClicked } from "./lib/mes
 import { readSecret } from "./lib/secret";
 import { chromeCaptureStorage } from "./lib/capture-storage";
 import { captureQueue } from "./lib/capture-queue";
-import { linkedinPage } from "./lib/capture-v2";
+import { linkedinPage, webPage } from "./lib/capture-v2";
 import { sendV2 } from "./lib/v2-delivery";
 
 const ALARM="flaneur-delivery-v2";
@@ -25,7 +25,13 @@ chrome.contextMenus.onClicked.addListener((info,tab)=>{
  if(info.menuItemId!==POST_MENU_ID||tab?.id===undefined)return;
  const message:PostMenuClicked={kind:"post-menu-clicked"};quietly(chrome.tabs.sendMessage(tab.id,message,{frameId:info.frameId}));
 });
-function contentSender(sender:chrome.runtime.MessageSender){return sender.id===chrome.runtime.id&&sender.frameId===0&&linkedinPage(sender.url)&&sender.tab!==undefined;}
+const webCaptureTabs=new Map<number,string>();
+if(chrome.action&&chrome.scripting)chrome.action.onClicked.addListener(tab=>{
+ if(tab.id===undefined||!webPage(tab.url))return;
+ webCaptureTabs.set(tab.id,tab.url!);
+ quietly(chrome.scripting.executeScript({target:{tabId:tab.id},files:['web.js']}));
+});
+function contentSender(sender:chrome.runtime.MessageSender){return sender.id===chrome.runtime.id&&sender.frameId===0&&sender.tab!==undefined&&(linkedinPage(sender.url)||(webCaptureTabs.get(sender.tab.id!)===sender.url&&webPage(sender.url)));}
 function optionsSender(sender:chrome.runtime.MessageSender){return sender.id===chrome.runtime.id&&sender.url===chrome.runtime.getURL("options.html");}
 const id=(value:unknown)=>typeof value==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
 chrome.runtime.onMessage.addListener((raw:unknown,sender,respond)=>{
@@ -34,7 +40,9 @@ chrome.runtime.onMessage.addListener((raw:unknown,sender,respond)=>{
  let work:Promise<unknown>;
  if(message.kind==="capture"&&content){
   const p=message.payload as CapturePayload|undefined;
-  work=queue().then(async queue=>({ok:true,...await queue.accept(p&&{version:2,requestId:p.requestId,adapterId:"linkedin",kind:p.type==="profile"?"profile_page":p.type==="post"?"social_post":"invalid",
+  if(p?.type==='article'&&(!webPage(sender.url)||p.sourceUrl!==sender.url))return false;
+  if(p?.type!=='article'&&!linkedinPage(sender.url))return false;
+  work=queue().then(async queue=>({ok:true,...await queue.accept(p&&{version:2,requestId:p.requestId,adapterId:p.type==='article'?'web':'linkedin',kind:p.type==="profile"?"profile_page":p.type==="post"?"social_post":p.type==='article'?'article':"invalid",
    sourceUrl:p.sourceUrl,html:p.html,reasonForNoticing:p.note,urn:p.urn,extensionVersion:p.extensionVersion,clientCapturedAt:p.clientCapturedAt})}));
  }else if(message.kind==="capture-status"&&content&&id(message.requestId))work=queue().then(async q=>({ok:true,...await q.status(message.requestId as string)}));
  else if(message.kind==="capture-list"&&options)work=queue().then(async q=>({ok:true,items:await q.list()}));

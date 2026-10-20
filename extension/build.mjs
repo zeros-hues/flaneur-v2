@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const dir = fileURLToPath(new URL(".", import.meta.url));
-const outdir = `${dir}dist`;
+const outdir = process.env.FLANEUR_CAPTURE_DEV === "true" ? `${dir}dev-dist` : `${dir}dist`;
 const watch = process.argv.includes("--watch");
 
 async function configAppUrl() {
@@ -25,7 +25,7 @@ async function appUrl() {
   throw new Error("No app URL: create extension/config.ts, or set APP_URL");
 }
 
-const origin = new URL(await appUrl()).origin;
+const origin = new URL(process.env.FLANEUR_CAPTURE_APP_URL || await appUrl()).origin;
 
 async function writeStatic() {
   const manifest = JSON.parse(await readFile(`${dir}manifest.json`, "utf8"));
@@ -46,6 +46,7 @@ const shared = {
   loader: { ".woff2": "binary" },
 };
 const builds = [
+  { ...shared, entryPoints: { web: `${dir}content/web.ts` }, format: "iife" },
   // Content scripts cannot be ES modules.
   { ...shared, entryPoints: { content: `${dir}content/index.ts` }, format: "iife" },
   { ...shared, entryPoints: { background: `${dir}background.ts` }, format: "esm" },

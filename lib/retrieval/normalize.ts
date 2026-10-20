@@ -1,10 +1,11 @@
 import { parseDocument, type El } from "../parsers/dom";
 import { representation } from "./representation";
 import { verifiedExcerpt } from "./evidence";
-import { TEXT_NORMALIZER_VERSION } from "../processing/parse-input";
+import { TEXT_NORMALIZER_VERSION, normalizerVersion } from "../processing/parse-input";
 
 export const NORMALIZER_VERSION = TEXT_NORMALIZER_VERSION;
 const roots = {
+  article: 'article[data-flaneur-source]',
   profile_page: 'section[aria-label="Primary content"]',
   social_post: '[role="listitem"][componentkey^="update-card-focus"]',
 } as const;
@@ -38,7 +39,7 @@ export function normalizeCapture(snapshotId: string, kind: keyof typeof roots, h
     .split("\n").map((line) => line.replace(/[ \t]+/g, " ").trim()).join("\n")
     .replace(/\n{3,}/g, "\n\n").trim();
   if (!text) throw new Error("EMPTY_CAPTURE_TEXT");
-  return representation(snapshotId, `${NORMALIZER_VERSION}:${kind}`, text);
+  return representation(snapshotId, `${normalizerVersion(kind)}:${kind}`, text);
 }
 
 /** Exact, unique quote location; repeated text requires explicit positions rather than guessing. */

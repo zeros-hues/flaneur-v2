@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "capture:dev": "node scripts/capture/dev.mjs",
+    "worker:capture": "node scripts/processing/capture.mjs",
     "worker:parse": "node scripts/processing/run.mjs",
     "auth:setup": "node scripts/auth/setup-owner.mjs",
     "auth:status": "node scripts/auth/status-owner.mjs",

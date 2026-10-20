@@ -1,5 +1,19 @@
 # Flaneur data model v2
 
+Current update, 2026-10-20: controlled Milestone D real-source acceptance is
+READY. Ten intentional Save requests created three source Artifacts and
+ten independent Snapshot/Encounter/User-reason histories. All thirty
+parse/index/enrichment jobs succeeded once; current Artifacts have live
+768-dimensional Gemini embeddings. Inferred Concepts remain Artifact-only
+partial-support Observations with immutable input/model provenance.
+Profile identity and post authorship remain unresolved; the portfolio
+name did not create a Person. Generic web keeps the existing Snapshot
+post bucket with adapter web and Artifact type article; no schema change
+was made. All 41 public-table baselines retain their original rows
+unchanged. See [exact graphs, added rows and model limits](docs/phase3/MILESTONE_D_ACCEPTANCE.md).
+
+Current update, 2026-10-19: Milestone D controlled Capture V2 implementation is PARTIALLY READY. New-source web capture, scoped durable semantic processing, V2 owner-note participation and private local activation tooling are implemented. Real profile/post/project capture and live post-capture retrieval remain pending; activation in .env stays off. No permanent database writes, schema changes, backfill or deployment occurred. See [implementation, validation, exact local setup and acceptance gaps](docs/phase3/LIVE_WITH_IT.md).
+
 Current update, 2026-10-19: Milestone C pattern-support qualification is READY for the scoped correction. Readable role witnesses now qualify domain candidates before independent-Person counting; irrelevant notes cannot corroborate roles. Reflect applies constraint/date qualification and current reviewed Concept proof checks. No schema or stored data changed. See [the exact live results, support, validation and deferred attribution debt](docs/phase3/PATTERN_SUPPORT_QUALIFICATION.md). This does not mark Phase 3 complete.
 
 Current update, 2026-10-19: directed trajectories are implemented as immutable Person `relationship_assertion` Observations under `reviewed_trajectory` / `explicit-trajectory-v1`, with frozen from/to Concept meanings, exact User reasons, current support references, optional precision-preserving periods and revision/review lineage. Opt-in chronology candidates remain Inferred and excluded from transition Recall until explicitly confirmed into a User revision. A+B co-occurrence and static legacy graph edges never establish a transition. No new entity, table, graph predicate or migration was required; no permanent database change was applied. See [implemented contract and validation](docs/phase3/TRAJECTORY.md). Earlier proposal-only updates below are historical.

@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Flaneur",
-  "version": "0.2.0",
-  "description": "Capture LinkedIn profiles and posts into your Flaneur notebook.",
+  "version": "0.3.0",
+  "description": "Save selected LinkedIn profiles, posts and web pages to your private Flaneur memory.",
   "permissions": [
     "contextMenus",
     "storage",
-    "alarms"
+    "alarms",
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [],
   "background": {
@@ -27,5 +29,8 @@
       ],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "action": {
+    "default_title": "Save this page to Flaneur"
+  }
 }
